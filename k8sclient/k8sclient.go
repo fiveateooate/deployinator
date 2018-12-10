@@ -7,29 +7,33 @@ import (
 )
 
 //InClusterClient - return a k8s client using incluster config
-func InClusterClient() *kubernetes.Clientset {
+func InClusterClient() (*kubernetes.Clientset, error) {
+	var clientset *kubernetes.Clientset
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		panic(err.Error())
+		return clientset, err
 	}
 	// creates the clientset
-	clientset, err := kubernetes.NewForConfig(config)
+	clientset, err = kubernetes.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		return clientset, err
 	}
-	return clientset
+	return clientset, err
 }
 
 // ExternalClient - use out of cluster config
-func ExternalClient(kubeConfig *string) *kubernetes.Clientset {
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", *kubeConfig)
+func ExternalClient(context string) (*kubernetes.Clientset, error) {
+	var clientset *kubernetes.Clientset
+	config, err := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{CurrentContext: context}).ClientConfig()
 	if err != nil {
-		panic(err.Error())
+		return clientset, err
 	}
-
-	// create the clientset
-	clientset, err := kubernetes.NewForConfig(config)
-	return clientset
+	clientset, err = kubernetes.NewForConfig(config)
+	if err != nil {
+		return clientset, err
+	}
+	return clientset, nil
 }
