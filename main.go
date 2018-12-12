@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/fiveateooate/deployinator/apphandler"
@@ -19,6 +20,14 @@ func setKubeConfig(kubeconfig *string) *string {
 	return kubeconfig
 }
 
+func checkHelmExists() bool {
+	_, err := exec.LookPath("helm")
+	if err != nil {
+		return false
+	}
+	return true
+}
+
 func main() {
 	var (
 		app           = kingpin.New("deployinator", "Deploy stuff to k8s cluster")
@@ -30,6 +39,7 @@ func main() {
 		appName       = app.Flag("appname", "Name of app to deploy").String()
 		namespaceName = app.Flag("namespace", "kubernetes namespace to use").String()
 		clusterConfig = app.Flag("clusterconfig", "Path to cluster config file").String()
+		helmRepo      = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
 	//	kubeconfig   = app.Flag("kubeconfig", "path to kube config").String()
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -43,12 +53,16 @@ func main() {
 		if !*dryrun {
 			fmt.Printf("Using Context: %s\n", *context)
 			// choose deployer type
-			// switch *deployerType {
-			// case "helm":
-			// 	deployer := helmdeployer.Deployer()
-			// case "newawesomedeployer":
-			// 	deployer := newawesomedeployer.Deployer()
-			// }
+			switch *deployerType {
+			case "helm":
+				if !checkHelmExists() {
+					fmt.Errorf("please install helm")
+				}
+				fmt.Println("Using helm deployer")
+				// deployer := helmdeployer.Deployer()
+			case "newawesomedeployer":
+				// deployer := newawesomedeployer.Deployer()
+			}
 			fmt.Printf("Deployer: %s\n", *deployerType)
 			if *incluster {
 				fmt.Println("Using incluster config")
@@ -60,7 +74,7 @@ func main() {
 					os.Exit(1)
 				}
 				if *appName != "" {
-					apphandler.ManageApp(*appName, *namespaceName, *context, clientset)
+					apphandler.ManageApp(*appName, *namespaceName, *context, *helmRepo, clientset)
 				}
 			}
 		} else {
