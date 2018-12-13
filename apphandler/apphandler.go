@@ -6,6 +6,7 @@ import (
 
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sbuddy"
+	"github.com/fiveateooate/deployinator/types"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -37,41 +38,38 @@ func getK8sVersion(deployment *appsv1.Deployment, appName string) string {
 	return k8sVersion
 }
 
-func checkVersion(deployment *appsv1.Deployment, helmRelease helmbuddy.HelmRelease, version string, appName string) bool {
-	k8sVersion := getK8sVersion(deployment, appName)
+func checkVersion(k8sVersion string, helmVersion string, version string) bool {
 	fmt.Printf("Checking version\n")
-	fmt.Printf("Helm Verison: %s, k8sVersion: %s, selected Version: %s\n", helmRelease.AppVersion, k8sVersion, version)
-	if k8sVersion == helmRelease.AppVersion && k8sVersion == version {
+	fmt.Printf("Helm Verison: %s, k8sVersion: %s, selected Version: %s\n", helmVersion, k8sVersion, version)
+	if k8sVersion == helmVersion && k8sVersion == version {
 		return false
 	}
 	return true
 }
 
-// ManageApp do stuff for a single app
-func ManageApp(appName string, namespace string, kubeContext string, helmRepo string, clientset *kubernetes.Clientset) {
+// ManageHelmApp do stuff for a single app
+func ManageHelmApp(helmInfo types.HelmInfo, clientset *kubernetes.Clientset) {
 	var (
 		version string
-		chart   = fmt.Sprintf("%s/%s", helmRepo, appName)
 	)
-	fmt.Printf("Getting info for deployment %s\n", appName)
-	deployment, err := k8sbuddy.GetDeployment(appName, namespace, clientset)
+	fmt.Printf("Getting info for deployment %s\n", helmInfo.AppName)
+	deployment, err := k8sbuddy.GetDeployment(helmInfo.AppName, helmInfo.Namespace, clientset)
 	if err == nil {
 		fmt.Printf("Found k8s deployment: %s\n", deployment.Name)
 	} else {
 		fmt.Println(err)
 	}
-	helmRelease := helmbuddy.GetRelease(appName, namespace, kubeContext)
-	if helmRelease.Name != "" {
-		fmt.Printf("Found helm release: %s\n", helmRelease.Name)
+	helmbuddy.GetRelease(&helmInfo)
+	if helmInfo.ReleaseName != "" {
+		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
 		if deployment != nil {
-			// do something with version checking ?
-			fmt.Printf("Upgrading release %s\n", helmRelease.Name)
-			version = selectVersion(chart)
-			checkVersion(deployment, helmRelease, version, appName)
-			helmbuddy.HelmUpgrade(helmRelease.Name, namespace, chart, version, kubeContext)
+			version = selectVersion(helmInfo.Chart)
+			checkVersion(getK8sVersion(deployment, helmInfo.AppName), helmInfo.ReleaseVersion, version)
+			fmt.Printf("Upgrading release %s\n", helmInfo.ReleaseName)
+			helmbuddy.HelmUpgrade(helmInfo, version)
 		}
 	} else {
-		fmt.Printf("Installing %s\n", appName)
-		helmbuddy.GetPkgs(chart)
+		fmt.Printf("Installing %s\n", helmInfo.AppName)
+		helmbuddy.GetPkgs(helmInfo.Chart)
 	}
 }

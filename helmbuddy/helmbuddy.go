@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/fiveateooate/deployinator/types"
 )
 
 // 	helm "k8s.io/helm/pkg/helm"
@@ -86,18 +88,17 @@ func ListReleases(namespace string, kubeContext string) (HelmListOutput, error) 
 }
 
 // GetRelease return something release
-func GetRelease(appname string, namespace string, kubeContext string) HelmRelease {
-	var retval HelmRelease
-	r, _ := regexp.Compile(fmt.Sprintf("^%s.*", appname))
-	releases, _ := ListReleases(namespace, kubeContext)
+func GetRelease(helmInfo *types.HelmInfo) {
+	r, _ := regexp.Compile(fmt.Sprintf("^%s.*", helmInfo.AppName))
+	releases, _ := ListReleases(helmInfo.Namespace, helmInfo.KubeContext)
 	for _, release := range releases.Releases {
 		match := r.MatchString(release.Name)
 		if match {
-			retval = release
+			helmInfo.ReleaseName = release.Name
+			helmInfo.ReleaseVersion = release.AppVersion
 			break
 		}
 	}
-	return retval
 }
 
 // GetPkgs return list of packages known to helm
@@ -139,13 +140,17 @@ func GetPkgs(chart string) []string {
 }
 
 // HelmUpgrade do a hlem upgrade
-func HelmUpgrade(helmRelease string, namespace string, chart string, version string, kubeContext string) bool {
+func HelmUpgrade(helmInfo types.HelmInfo, version string) bool {
 	var (
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", kubeContext, "--namespace", namespace, "upgrade", helmRelease, "--version", version, chart}
+		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "upgrade", helmInfo.ReleaseName, "--version", version, helmInfo.Chart, "--dry-run", "--debug"}
 	)
+	if helmInfo.ValuesFile != "" {
+		cmdArgs = append(cmdArgs, "-f")
+		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
+	}
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
 		return false
 	}
