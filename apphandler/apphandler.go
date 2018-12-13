@@ -2,11 +2,12 @@ package apphandler
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sbuddy"
-	"github.com/fiveateooate/deployinator/types"
+	"github.com/fiveateooate/deployinator/model"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -48,7 +49,7 @@ func checkVersion(k8sVersion string, helmVersion string, version string) bool {
 }
 
 // ManageHelmApp do stuff for a single app
-func ManageHelmApp(helmInfo types.HelmInfo, clientset *kubernetes.Clientset) {
+func ManageHelmApp(helmInfo model.HelmInfo, clientset *kubernetes.Clientset) {
 	var (
 		version string
 	)
@@ -59,17 +60,26 @@ func ManageHelmApp(helmInfo types.HelmInfo, clientset *kubernetes.Clientset) {
 	} else {
 		fmt.Println(err)
 	}
+	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
 	if helmInfo.ReleaseName != "" {
 		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
 		if deployment != nil {
 			version = selectVersion(helmInfo.Chart)
-			checkVersion(getK8sVersion(deployment, helmInfo.AppName), helmInfo.ReleaseVersion, version)
+			if !checkVersion(getK8sVersion(deployment, helmInfo.AppName), helmInfo.ReleaseVersion, version) {
+				fmt.Printf("Version %s is already installed\n", version)
+				return
+			}
 			fmt.Printf("Upgrading release %s\n", helmInfo.ReleaseName)
 			helmbuddy.HelmUpgrade(helmInfo, version)
+		} else {
+			fmt.Println("Something is not right DIE DIE DIE")
+			os.Exit(2)
 		}
 	} else {
 		fmt.Printf("Installing %s\n", helmInfo.AppName)
-		helmbuddy.GetPkgs(helmInfo.Chart)
+		version = selectVersion(helmInfo.Chart)
+		fmt.Printf("Installing %s\n", helmInfo.Chart)
+		helmbuddy.HelmInstall(helmInfo, version)
 	}
 }

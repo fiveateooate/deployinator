@@ -1,4 +1,4 @@
-package types
+package model
 
 // HelmInfo stuff need to do helm things
 type HelmInfo struct {

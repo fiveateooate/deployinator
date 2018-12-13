@@ -8,7 +8,7 @@ import (
 
 	"github.com/fiveateooate/deployinator/apphandler"
 	"github.com/fiveateooate/deployinator/k8sclient"
-	"github.com/fiveateooate/deployinator/types"
+	"github.com/fiveateooate/deployinator/model"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -62,7 +62,7 @@ func main() {
 				}
 				fmt.Println("Using helm deployer")
 				chart := fmt.Sprintf("%s/%s", *helmRepo, *appName)
-				helmInfo := types.HelmInfo{ValuesFile: *helmValuesFile, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
+				helmInfo := model.HelmInfo{ValuesFile: *helmValuesFile, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
 				// deployer := helmdeployer.Deployer()
 				fmt.Printf("Deployer: %s\n", *deployerType)
 				if *incluster {

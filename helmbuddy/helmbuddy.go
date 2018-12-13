@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/fiveateooate/deployinator/types"
+	"github.com/fiveateooate/deployinator/model"
 )
 
 // 	helm "k8s.io/helm/pkg/helm"
@@ -88,7 +88,7 @@ func ListReleases(namespace string, kubeContext string) (HelmListOutput, error) 
 }
 
 // GetRelease return something release
-func GetRelease(helmInfo *types.HelmInfo) {
+func GetRelease(helmInfo *model.HelmInfo) {
 	r, _ := regexp.Compile(fmt.Sprintf("^%s.*", helmInfo.AppName))
 	releases, _ := ListReleases(helmInfo.Namespace, helmInfo.KubeContext)
 	for _, release := range releases.Releases {
@@ -139,13 +139,50 @@ func GetPkgs(chart string) []string {
 	return versions
 }
 
+// RepoUpdate update a helm repo
+func RepoUpdate(helmInfo model.HelmInfo) {
+	var (
+		cmdOut  []byte
+		err     error
+		cmdName = "helm"
+		cmdArgs = []string{"repo", "update", helmInfo.Repo}
+	)
+	if helmInfo.ValuesFile != "" {
+		cmdArgs = append(cmdArgs, "-f")
+		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
+	}
+	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(cmdOut))
+}
+
 // HelmUpgrade do a hlem upgrade
-func HelmUpgrade(helmInfo types.HelmInfo, version string) bool {
+func HelmUpgrade(helmInfo model.HelmInfo, version string) bool {
 	var (
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
 		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "upgrade", helmInfo.ReleaseName, "--version", version, helmInfo.Chart, "--dry-run", "--debug"}
+	)
+	if helmInfo.ValuesFile != "" {
+		cmdArgs = append(cmdArgs, "-f")
+		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
+	}
+	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		return false
+	}
+	fmt.Println(string(cmdOut))
+	return true
+}
+
+// HelmInstall install something with helm
+func HelmInstall(helmInfo model.HelmInfo, version string) bool {
+	var (
+		cmdOut  []byte
+		err     error
+		cmdName = "helm"
+		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "install", "--version", version, helmInfo.Chart, "--dry-run", "--debug"}
 	)
 	if helmInfo.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
