@@ -101,16 +101,16 @@ func GetRelease(appname string, namespace string, kubeContext string) HelmReleas
 }
 
 // GetPkgs return list of packages known to helm
-func GetPkgs(appName string, helmRepo string) {
+func GetPkgs(chart string) []string {
 	var (
 		cmdReader io.Reader
 		err       error
 		scanner   *bufio.Scanner
-		helmPkg   = fmt.Sprintf("%s/%s", helmRepo, appName)
 		cmdName   = "helm"
-		cmdArgs   = []string{"search", "-l", helmPkg}
+		cmdArgs   = []string{"search", "-l", chart}
+		versions  []string
 	)
-	fmt.Printf("Searching for %s\n", helmPkg)
+	fmt.Printf("Searching for %s\n", chart)
 	cmd := exec.Command(cmdName, cmdArgs...)
 	cmdReader, err = cmd.StdoutPipe()
 	if err != nil {
@@ -118,22 +118,37 @@ func GetPkgs(appName string, helmRepo string) {
 		os.Exit(1)
 	}
 	scanner = bufio.NewScanner(cmdReader)
-	go func() {
+	go func(versions *[]string) {
 		for scanner.Scan() {
 			if out := processLine(scanner.Text()); out != "" {
-				fmt.Println(out)
+				*versions = append(*versions, out)
 			}
 		}
-	}()
+	}(&versions)
 	err = cmd.Start()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error starting Cmd", err)
 		os.Exit(1)
 	}
-
 	err = cmd.Wait()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Error waiting for Cmd", err)
 		os.Exit(1)
 	}
+	return versions
+}
+
+// HelmUpgrade do a hlem upgrade
+func HelmUpgrade(helmRelease string, namespace string, chart string, version string, kubeContext string) bool {
+	var (
+		cmdOut  []byte
+		err     error
+		cmdName = "helm"
+		cmdArgs = []string{"--kube-context", kubeContext, "--namespace", namespace, "upgrade", helmRelease, "--version", version, chart}
+	)
+	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		return false
+	}
+	fmt.Println(string(cmdOut))
+	return true
 }
