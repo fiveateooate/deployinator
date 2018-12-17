@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
 
 	"github.com/fiveateooate/deployinator/model"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // 	helm "k8s.io/helm/pkg/helm"
@@ -91,6 +93,16 @@ func checkHelmRepo(helmrepo string) bool {
 	return false
 }
 
+func getBartCreds() (string, string) {
+	var (
+		bartfile = ".bart.yaml"
+		contents map[string]string
+	)
+	data, _ := ioutil.ReadFile(bartfile)
+	yaml.Unmarshal([]byte(data), &contents)
+	return contents["githubtoken"], contents["githubuser"]
+}
+
 func addHelmRepo(helmrepo string, helmURL string) {
 	var (
 		cmdName = "helm"
@@ -98,6 +110,12 @@ func addHelmRepo(helmrepo string, helmURL string) {
 		cmdOut  []byte
 		err     error
 	)
+	un, pw := getBartCreds()
+	cmdArgs = append(cmdArgs, "--username")
+	cmdArgs = append(cmdArgs, un)
+	cmdArgs = append(cmdArgs, "--password")
+	cmdArgs = append(cmdArgs, pw)
+
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
 		fmt.Printf("error: %s", err)
 	} else {
