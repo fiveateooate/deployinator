@@ -3,14 +3,33 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"time"
 
 	"github.com/fiveateooate/deployinator/apphandler"
+	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sclient"
 	"github.com/fiveateooate/deployinator/model"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
+	"k8s.io/client-go/kubernetes"
 )
+
+func connectK8s(incluster bool, context string) *kubernetes.Clientset {
+	var (
+		clientset *kubernetes.Clientset
+		err       error
+	)
+	if incluster {
+		fmt.Println("Using incluster config")
+	} else {
+		fmt.Println("Using external kubeconfig")
+		clientset, err = k8sclient.ExternalClient(context)
+		if err != nil {
+			fmt.Printf("Failed to connect to k8s: %s\n", err)
+			os.Exit(1)
+		}
+	}
+	return clientset
+}
 
 func setKubeConfig(kubeconfig *string) *string {
 	if *kubeconfig == "" {
@@ -18,14 +37,6 @@ func setKubeConfig(kubeconfig *string) *string {
 		kubeconfig = &temp
 	}
 	return kubeconfig
-}
-
-func checkHelmExists() bool {
-	_, err := exec.LookPath("helm")
-	if err != nil {
-		return false
-	}
-	return true
 }
 
 func main() {
@@ -40,8 +51,9 @@ func main() {
 		namespaceName  = app.Flag("namespace", "kubernetes namespace to use").String()
 		clusterConfig  = app.Flag("clusterconfig", "Path to cluster config file").String()
 		helmRepo       = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
+		helmURL        = app.Flag("helmurl", "URL of helm repo").Default("https://adsfadsf").String()
 		helmValuesFile = app.Flag("helmvaluesfile", "Path to values file").String()
-	//	kubeconfig   = app.Flag("kubeconfig", "path to kube config").String()
+		clientset      *kubernetes.Clientset
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
@@ -49,34 +61,20 @@ func main() {
 		fmt.Println("Either appname or clusterconfig must be set")
 		os.Exit(1)
 	}
-
 	for {
 		if !*dryrun {
-			fmt.Printf("Using Context: %s\n", *context)
+			clientset = connectK8s(*incluster, *context)
 			// choose deployer type
 			switch *deployerType {
 			case "helm":
-				if !checkHelmExists() {
-					fmt.Println("please install helm")
+				if err := helmbuddy.CheckHelmSetup(*helmRepo, *helmURL); err != nil {
+					fmt.Printf("Helm setup incomplete: %s\n", err)
 					os.Exit(1)
 				}
-				fmt.Println("Using helm deployer")
 				chart := fmt.Sprintf("%s/%s", *helmRepo, *appName)
 				helmInfo := model.HelmInfo{ValuesFile: *helmValuesFile, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
-				// deployer := helmdeployer.Deployer()
-				fmt.Printf("Deployer: %s\n", *deployerType)
-				if *incluster {
-					fmt.Println("Using incluster config")
-				} else {
-					fmt.Println("Using external kubeconfig")
-					clientset, err := k8sclient.ExternalClient(*context)
-					if err != nil {
-						fmt.Printf("Failed to connect to k8s: %s\n", err)
-						os.Exit(1)
-					}
-					if *appName != "" {
-						apphandler.ManageHelmApp(helmInfo, clientset)
-					}
+				if *appName != "" {
+					apphandler.ManageHelmApp(helmInfo, clientset)
 				}
 			case "newawesomedeployer":
 				// deployer := newawesomedeployer.Deployer()

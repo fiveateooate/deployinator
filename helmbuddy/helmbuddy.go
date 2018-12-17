@@ -71,6 +71,40 @@ func processLine(text string) string {
 	return tmp[1]
 }
 
+func checkHelmRepo(helmrepo string) bool {
+	var (
+		cmdName = "helm"
+		cmdArgs = []string{"repo", "list", helmrepo}
+		cmdOut  []byte
+		err     error
+	)
+	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		fmt.Printf("error: %s", err)
+		return false
+	}
+	for _, line := range strings.Split(string(cmdOut), "\n") {
+		tmp := strings.Fields(line)
+		if len(tmp) > 0 && tmp[0] == helmrepo {
+			return true
+		}
+	}
+	return false
+}
+
+func addHelmRepo(helmrepo string, helmURL string) {
+	var (
+		cmdName = "helm"
+		cmdArgs = []string{"repo", "add", helmrepo, helmURL}
+		cmdOut  []byte
+		err     error
+	)
+	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		fmt.Printf("error: %s", err)
+	} else {
+		fmt.Printf("%s", string(cmdOut))
+	}
+}
+
 // ListReleases return struct of releases
 func ListReleases(namespace string, kubeContext string) (HelmListOutput, error) {
 	var (
@@ -163,7 +197,7 @@ func HelmUpgrade(helmInfo model.HelmInfo, version string) bool {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "upgrade", helmInfo.ReleaseName, "--version", version, helmInfo.Chart, "--dry-run", "--debug"}
+		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "upgrade", helmInfo.ReleaseName, "--version", version, helmInfo.Chart}
 	)
 	if helmInfo.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -182,7 +216,7 @@ func HelmInstall(helmInfo model.HelmInfo, version string) bool {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "install", "--version", version, helmInfo.Chart, "--dry-run", "--debug"}
+		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "install", "--version", version, helmInfo.Chart}
 	)
 	if helmInfo.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -193,4 +227,17 @@ func HelmInstall(helmInfo model.HelmInfo, version string) bool {
 	}
 	fmt.Println(string(cmdOut))
 	return true
+}
+
+// CheckHelmSetup check that helm is setup and configured
+func CheckHelmSetup(helmRepo string, helmURL string) error {
+	_, err := exec.LookPath("helm")
+	if err != nil {
+		fmt.Printf("Helm not found: %s\n", err)
+		return err
+	}
+	if !checkHelmRepo(helmRepo) {
+		addHelmRepo(helmRepo, helmURL)
+	}
+	return nil
 }
