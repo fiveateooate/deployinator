@@ -9,6 +9,13 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// GetDaemonset return info on single deployment
+func GetDaemonset(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.DaemonSet, error) {
+	daemonsetClient := clientset.AppsV1().DaemonSets(namespaceName)
+	result, err := daemonsetClient.Get(appName, metav1.GetOptions{})
+	return result, err
+}
+
 // GetDeployment return info on single deployment
 func GetDeployment(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.Deployment, error) {
 	deploymentsClient := clientset.AppsV1().Deployments(namespaceName)

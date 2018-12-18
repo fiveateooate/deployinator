@@ -53,6 +53,7 @@ func main() {
 		helmRepo       = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
 		helmURL        = app.Flag("helmurl", "URL of helm repo").Default("https://adsfadsf").String()
 		helmValuesFile = app.Flag("helmvaluesfile", "Path to values file").String()
+		deploymentType = app.Flag("deploymenttype", "Deployment Type [deployment, daemonset, statefulset]").Default("deployment").String()
 		clientset      *kubernetes.Clientset
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
@@ -74,7 +75,14 @@ func main() {
 				chart := fmt.Sprintf("%s/%s", *helmRepo, *appName)
 				helmInfo := model.HelmInfo{ValuesFile: *helmValuesFile, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
 				if *appName != "" {
-					apphandler.ManageHelmApp(helmInfo, clientset)
+					switch *deploymentType {
+					case "deployment":
+						apphandler := apphandler.DeploymentHandler{}
+						apphandler.ManageHelmApp(helmInfo, clientset)
+					case "daemonset":
+						apphandler := apphandler.DaemonsetHandler{}
+						apphandler.ManageHelmApp(helmInfo, clientset)
+					}
 				}
 			case "newawesomedeployer":
 				// deployer := newawesomedeployer.Deployer()
