@@ -2,6 +2,8 @@ package k8sclient
 
 import (
 	"k8s.io/client-go/kubernetes"
+	// needed to do gcp auth
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )

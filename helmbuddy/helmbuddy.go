@@ -141,7 +141,8 @@ func ListReleases(namespace string, kubeContext string) (HelmListOutput, error) 
 
 // GetRelease return something release
 func GetRelease(helmInfo *model.HelmInfo) {
-	r, _ := regexp.Compile(fmt.Sprintf("^%s.*", helmInfo.AppName))
+	regex := fmt.Sprintf("^%s(|-[a-z0-9]{5})$", helmInfo.AppName)
+	r := regexp.MustCompile(regex)
 	releases, _ := ListReleases(helmInfo.Namespace, helmInfo.KubeContext)
 	for _, release := range releases.Releases {
 		match := r.MatchString(release.Name)
@@ -199,10 +200,6 @@ func RepoUpdate(helmInfo model.HelmInfo) {
 		cmdName = "helm"
 		cmdArgs = []string{"repo", "update", helmInfo.Repo}
 	)
-	if helmInfo.ValuesFile != "" {
-		cmdArgs = append(cmdArgs, "-f")
-		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
-	}
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
 		fmt.Println(err)
 	}

@@ -2,6 +2,7 @@ package apphandler
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/model"
@@ -18,6 +19,10 @@ func selectVersion(chart string) string {
 		selectedVersion int
 	)
 	pkgs := helmbuddy.GetPkgs(chart)
+	if len(pkgs) == 0 {
+		fmt.Printf("No helm packages found, please check repo")
+		os.Exit(0)
+	}
 	fmt.Println("Select Pkg Version:")
 	for idx, version := range pkgs {
 		fmt.Printf("  %d. %s\n", idx+1, version)

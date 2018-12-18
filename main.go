@@ -82,6 +82,9 @@ func main() {
 					case "daemonset":
 						apphandler := apphandler.DaemonsetHandler{}
 						apphandler.ManageHelmApp(helmInfo, clientset)
+					case "statefulset":
+						apphandler := apphandler.StatefulsetHandler{}
+						apphandler.ManageHelmApp(helmInfo, clientset)
 					}
 				}
 			case "newawesomedeployer":

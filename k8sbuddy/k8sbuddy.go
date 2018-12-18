@@ -23,6 +23,13 @@ func GetDeployment(appName string, namespaceName string, clientset *kubernetes.C
 	return result, err
 }
 
+// GetStatefulset return info on single deployment
+func GetStatefulset(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.StatefulSet, error) {
+	statefulsetClient := clientset.AppsV1().StatefulSets(namespaceName)
+	result, err := statefulsetClient.Get(appName, metav1.GetOptions{})
+	return result, err
+}
+
 // GetDeployments return list of all deployments in all namespaces
 func GetDeployments(clientset *kubernetes.Clientset, namespace apiv1.Namespace) {
 	deploymentsClient := clientset.AppsV1().Deployments(namespace.GetName())

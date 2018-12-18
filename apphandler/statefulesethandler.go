@@ -16,7 +16,7 @@ import (
 type StatefulsetHandler struct {
 }
 
-func (ds *StatefulsetHandler) getVersion(statefulset *appsv1.DaemonSet, appName string) string {
+func (ds *StatefulsetHandler) getVersion(statefulset *appsv1.StatefulSet, appName string) string {
 	var (
 		k8sVersion string
 		re         = regexp.MustCompile(fmt.Sprintf(".*%s:(.*)$", appName))
@@ -33,15 +33,15 @@ func (ds *StatefulsetHandler) getVersion(statefulset *appsv1.DaemonSet, appName 
 func (ds *StatefulsetHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *kubernetes.Clientset) {
 	var (
 		version         string
-		daemonset       *appsv1.DaemonSet
+		statefulset     *appsv1.StatefulSet
 		err             error
 		deployedVersion string
 	)
 	fmt.Printf("Getting info for %s\n", helmInfo.AppName)
-	daemonset, err = k8sbuddy.GetDaemonset(helmInfo.AppName, helmInfo.Namespace, clientset)
+	statefulset, err = k8sbuddy.GetStatefulset(helmInfo.AppName, helmInfo.Namespace, clientset)
 	if err == nil {
-		fmt.Printf("Found k8s daemonset: %s\n", daemonset.Name)
-		deployedVersion = ds.getVersion(daemonset, helmInfo.AppName)
+		fmt.Printf("Found k8s statefulset: %s\n", statefulset.Name)
+		deployedVersion = ds.getVersion(statefulset, helmInfo.AppName)
 	} else {
 		fmt.Println(err)
 	}
@@ -49,7 +49,7 @@ func (ds *StatefulsetHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *
 	helmbuddy.GetRelease(&helmInfo)
 	if helmInfo.ReleaseName != "" {
 		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
-		if daemonset != nil {
+		if statefulset != nil {
 			version = selectVersion(helmInfo.Chart)
 			if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
 				fmt.Printf("Version %s is already installed\n", version)
