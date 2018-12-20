@@ -272,6 +272,12 @@
 			"revisionTime": "2018-12-07T15:58:09Z"
 		},
 		{
+			"checksumSHA1": "+rzgIJjNYs8Nk+6+KADO1LlJnIg=",
+			"path": "github.com/wsxiaoys/terminal/color",
+			"revision": "0940f3fc43a0ed42d04916b1c04578462c650b09",
+			"revisionTime": "2016-05-13T16:08:01Z"
+		},
+		{
 			"checksumSHA1": "zNbO+dkY3qsBQlYpmJdqZYYorXQ=",
 			"origin": "k8s.io/client-go/vendor/golang.org/x/crypto/ssh/terminal",
 			"path": "golang.org/x/crypto/ssh/terminal",

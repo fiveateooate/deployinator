@@ -9,6 +9,7 @@ import (
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sclient"
 	"github.com/fiveateooate/deployinator/model"
+	"github.com/wsxiaoys/terminal/color"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/kubernetes"
 )
@@ -21,10 +22,9 @@ func connectK8s(incluster bool, context string) *kubernetes.Clientset {
 	if incluster {
 		fmt.Println("Using incluster config")
 	} else {
-		fmt.Println("Using external kubeconfig")
 		clientset, err = k8sclient.ExternalClient(context)
 		if err != nil {
-			fmt.Printf("Failed to connect to k8s: %s\n", err)
+			color.Printf("@rFailed to connect to k8s: %s\n", err)
 			os.Exit(1)
 		}
 	}
@@ -41,25 +41,25 @@ func setKubeConfig(kubeconfig *string) *string {
 
 func main() {
 	var (
-		app            = kingpin.New("deployinator", "Deploy stuff to k8s cluster")
-		onetime        = app.Flag("onetime", "Do only once, don't loop").Default("false").Bool()
-		dryrun         = app.Flag("dryrun", "Print stuff, don't actually do anything").Default("false").Bool()
-		incluster      = app.Flag("incluster", "Use kuebenetes in cluster config").Default("false").Bool()
-		context        = app.Flag("context", "Kube context").Default("local").String()
-		deployerType   = app.Flag("deployertype", "Type of deployer: default helm").Default("helm").String()
-		appName        = app.Flag("appname", "Name of app to deploy").String()
-		namespaceName  = app.Flag("namespace", "kubernetes namespace to use").String()
-		clusterConfig  = app.Flag("clusterconfig", "Path to cluster config file").String()
-		helmRepo       = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
-		helmURL        = app.Flag("helmurl", "URL of helm repo").Default("https://adsfadsf").String()
-		helmValuesFile = app.Flag("helmvaluesfile", "Path to values file").String()
-		deploymentType = app.Flag("deploymenttype", "Deployment Type [deployment, daemonset, statefulset]").Default("deployment").String()
-		clientset      *kubernetes.Clientset
+		app           = kingpin.New("deployinator", "Deploy stuff to k8s cluster")
+		loop          = app.Flag("loop", "Loop and repeatedly apply").Default("false").Bool()
+		dryrun        = app.Flag("dryrun", "Print stuff, don't actually do anything").Default("false").Bool()
+		incluster     = app.Flag("incluster", "Use kuebenetes in cluster config").Default("false").Bool()
+		context       = app.Flag("context", "Kube context").Default("local").String()
+		deployerType  = app.Flag("deployertype", "Type of deployer: default helm").Default("helm").String()
+		appName       = app.Flag("appname", "Name of app to deploy").String()
+		namespaceName = app.Flag("namespace", "kubernetes namespace to use").String()
+		clusterConfig = app.Flag("clusterconfig", "Path to cluster config file").String()
+		helmRepo      = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
+		helmURL       = app.Flag("helmurl", "URL of helm repo").Default("https://adsfadsf").String()
+		helmValues    = app.Flag("helmvalues", "Path to helm values file").String()
+		kind          = app.Flag("kind", "Kubernetes kind [deployment, daemonset, statefulset]").Default("deployment").String()
+		clientset     *kubernetes.Clientset
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	if *appName == "" && *clusterConfig == "" {
-		fmt.Println("Either appname or clusterconfig must be set")
+		color.Println("@yEither appname or clusterconfig must be set")
 		os.Exit(1)
 	}
 	for {
@@ -69,13 +69,13 @@ func main() {
 			switch *deployerType {
 			case "helm":
 				if err := helmbuddy.CheckHelmSetup(*helmRepo, *helmURL); err != nil {
-					fmt.Printf("Helm setup incomplete: %s\n", err)
+					color.Printf("@rHelm setup incomplete: %s\n", err)
 					os.Exit(1)
 				}
 				chart := fmt.Sprintf("%s/%s", *helmRepo, *appName)
-				helmInfo := model.HelmInfo{ValuesFile: *helmValuesFile, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
+				helmInfo := model.HelmInfo{ValuesFile: *helmValues, Repo: *helmRepo, AppName: *appName, Namespace: *namespaceName, KubeContext: *context, Chart: chart}
 				if *appName != "" {
-					switch *deploymentType {
+					switch *kind {
 					case "deployment":
 						apphandler := apphandler.DeploymentHandler{}
 						apphandler.ManageHelmApp(helmInfo, clientset)
@@ -93,8 +93,8 @@ func main() {
 		} else {
 			fmt.Println("Would have done xyz")
 		}
-		fmt.Printf("Done\n")
-		if *onetime {
+		color.Printf("@cDone\n")
+		if !*loop {
 			break
 		}
 		time.Sleep(30 * time.Second)

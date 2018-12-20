@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/fiveateooate/deployinator/model"
+	"github.com/wsxiaoys/terminal/color"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -143,15 +144,18 @@ func ListReleases(namespace string, kubeContext string) (HelmListOutput, error) 
 func GetRelease(helmInfo *model.HelmInfo) {
 	regex := fmt.Sprintf("^%s(|-[a-z0-9]{5})$", helmInfo.AppName)
 	r := regexp.MustCompile(regex)
+	color.Printf("@cSearching for helm release ...")
 	releases, _ := ListReleases(helmInfo.Namespace, helmInfo.KubeContext)
 	for _, release := range releases.Releases {
 		match := r.MatchString(release.Name)
 		if match {
 			helmInfo.ReleaseName = release.Name
 			helmInfo.ReleaseVersion = release.AppVersion
-			break
+			color.Printf("found %s\n", helmInfo.ReleaseName)
+			return
 		}
 	}
+	color.Printf("not found\n")
 }
 
 // GetPkgs return list of packages known to helm
@@ -164,7 +168,7 @@ func GetPkgs(chart string) []string {
 		cmdArgs   = []string{"search", "-l", chart}
 		versions  []string
 	)
-	fmt.Printf("Searching for %s\n", chart)
+	color.Printf("@cSearching for %s ... ", chart)
 	cmd := exec.Command(cmdName, cmdArgs...)
 	cmdReader, err = cmd.StdoutPipe()
 	if err != nil {
@@ -189,6 +193,7 @@ func GetPkgs(chart string) []string {
 		fmt.Fprintln(os.Stderr, "Error waiting for Cmd", err)
 		os.Exit(1)
 	}
+	color.Printf("done\n")
 	return versions
 }
 
@@ -200,10 +205,14 @@ func RepoUpdate(helmInfo model.HelmInfo) {
 		cmdName = "helm"
 		cmdArgs = []string{"repo", "update", helmInfo.Repo}
 	)
+	color.Print("@cUpdating helm repositories ... ")
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(string(cmdOut))
+	if 1 == 0 {
+		fmt.Println(string(cmdOut))
+	}
+	color.Printf("done\n")
 }
 
 // HelmUpgrade do a hlem upgrade
@@ -219,6 +228,7 @@ func HelmUpgrade(helmInfo model.HelmInfo, version string) bool {
 		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
 	}
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		color.Printf("@rRelease upgrade failed: %s\n%s\n", err, cmdArgs)
 		return false
 	}
 	fmt.Println(string(cmdOut))
@@ -231,13 +241,14 @@ func HelmInstall(helmInfo model.HelmInfo, version string) bool {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "install", "--version", version, helmInfo.Chart}
+		cmdArgs = []string{"--kube-context", helmInfo.KubeContext, "--namespace", helmInfo.Namespace, "install", "--version", version, "--name", helmInfo.ReleaseName, helmInfo.Chart}
 	)
 	if helmInfo.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
 		cmdArgs = append(cmdArgs, helmInfo.ValuesFile)
 	}
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
+		color.Printf("@rRelease upgrade failed: %s\n%s\n", err, cmdArgs)
 		return false
 	}
 	fmt.Println(string(cmdOut))
