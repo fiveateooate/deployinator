@@ -147,8 +147,8 @@ func GetRelease(helmInfo *model.HelmInfo) {
 	color.Printf("@cSearching for helm release ...")
 	releases, _ := ListReleases(helmInfo.Namespace, helmInfo.KubeContext)
 	for _, release := range releases.Releases {
-		match := r.MatchString(release.Name)
-		if match {
+		match := r.FindString(release.Name)
+		if match != "" {
 			helmInfo.ReleaseName = release.Name
 			helmInfo.ReleaseVersion = release.AppVersion
 			color.Printf("found %s\n", helmInfo.ReleaseName)
