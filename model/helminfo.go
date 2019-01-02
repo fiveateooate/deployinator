@@ -11,4 +11,5 @@ type HelmInfo struct {
 	KubeContext    string
 	ReleaseName    string
 	ReleaseVersion string
+	ReleaseExists  bool
 }

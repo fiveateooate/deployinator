@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"regexp"
@@ -39,19 +40,31 @@ import (
 
 // HelmRelease hold info about a helm release
 type HelmRelease struct {
-	Name       string `json:"Name"`
-	Revision   int    `json:"Revision"`
-	Updated    string `json:"Updated"`
-	Status     string `json:"Status"`
-	Chart      string `json:"Chart"`
-	AppVersion string `json:"AppVersion"`
-	Namespace  string `json:"Namespace"`
+	Name          string `json:"Name"`
+	Revision      int    `json:"Revision"`
+	Updated       string `json:"Updated"`
+	Status        string `json:"Status"`
+	Chart         string `json:"Chart"`
+	AppVersion    string `json:"AppVersion"`
+	Namespace     string `json:"Namespace"`
+	ReleaseExists bool   `json:ReleaseExists`
 }
 
 // HelmListOutput struct to hold unmarshaled json
 type HelmListOutput struct {
 	Next     string        `json:"Next"`
 	Releases []HelmRelease `json:"Releases"`
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyz01234566789"
+
+// RandStringBytes copied from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-go
+func RandStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
 
 func runCmd(cmd string, args []string) ([]byte, error) {
@@ -151,10 +164,13 @@ func GetRelease(helmInfo *model.HelmInfo) {
 		if match != "" {
 			helmInfo.ReleaseName = release.Name
 			helmInfo.ReleaseVersion = release.AppVersion
+			helmInfo.ReleaseExists = true
 			color.Printf("found %s\n", helmInfo.ReleaseName)
 			return
 		}
 	}
+	helmInfo.ReleaseName = fmt.Sprintf("%s-%s", helmInfo.AppName, RandStringBytes(5))
+	helmInfo.ReleaseExists = false
 	color.Printf("not found\n")
 }
 

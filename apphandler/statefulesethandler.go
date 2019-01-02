@@ -47,7 +47,7 @@ func (ds *StatefulsetHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *
 	}
 	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
-	if helmInfo.ReleaseName != "" {
+	if helmInfo.ReleaseExists {
 		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
 		if statefulset != nil {
 			version = selectVersion(helmInfo.Chart)

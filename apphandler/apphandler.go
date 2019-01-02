@@ -2,7 +2,6 @@ package apphandler
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 
 	"github.com/fiveateooate/deployinator/helmbuddy"
@@ -14,17 +13,6 @@ import (
 // AppHandler commect to get rid of lint
 type AppHandler interface {
 	ManageHelmApp(helmInfo model.HelmInfo, clientset *kubernetes.Clientset)
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyz01234566789"
-
-// RandStringBytes copied from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-go
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }
 
 func selectVersion(chart string) string {

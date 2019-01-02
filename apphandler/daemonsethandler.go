@@ -47,7 +47,7 @@ func (ds *DaemonsetHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *ku
 	}
 	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
-	if helmInfo.ReleaseName != "" {
+	if helmInfo.ReleaseExists {
 		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
 		if daemonset != nil {
 			version = selectVersion(helmInfo.Chart)

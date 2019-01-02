@@ -47,7 +47,7 @@ func (dp *DeploymentHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *k
 	}
 	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
-	if helmInfo.ReleaseName != "" {
+	if helmInfo.ReleaseExists {
 		if deployment != nil {
 			version = selectVersion(helmInfo.Chart)
 			if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
@@ -61,7 +61,6 @@ func (dp *DeploymentHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *k
 			os.Exit(2)
 		}
 	} else {
-		helmInfo.ReleaseName = fmt.Sprintf("%s-%s", helmInfo.AppName, RandStringBytes(5))
 		color.Printf("@yInstalling %s\n", helmInfo.AppName)
 		version = selectVersion(helmInfo.Chart)
 		fmt.Printf("Installing %s\n", helmInfo.Chart)
