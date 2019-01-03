@@ -181,10 +181,10 @@ func GetPkgs(chart string) []string {
 		err       error
 		scanner   *bufio.Scanner
 		cmdName   = "helm"
-		cmdArgs   = []string{"search", "-l", chart}
+		cmdArgs   = []string{"search", "-l", "-r", chart + "\v"}
 		versions  []string
 	)
-	color.Printf("@cSearching for %s ... ", chart)
+	color.Printf("@cFinding charts ...")
 	cmd := exec.Command(cmdName, cmdArgs...)
 	cmdReader, err = cmd.StdoutPipe()
 	if err != nil {
@@ -209,7 +209,11 @@ func GetPkgs(chart string) []string {
 		fmt.Fprintln(os.Stderr, "Error waiting for Cmd", err)
 		os.Exit(1)
 	}
-	color.Printf("done\n")
+	if len(versions) > 1 {
+		color.Printf("done\n")
+	} else {
+		color.Printf("@rno charts found\n")
+	}
 	return versions
 }
 
@@ -221,7 +225,7 @@ func RepoUpdate(helmInfo model.HelmInfo) {
 		cmdName = "helm"
 		cmdArgs = []string{"repo", "update", helmInfo.Repo}
 	)
-	color.Print("@cUpdating helm repositories ... ")
+	color.Print("@cUpdating helm repositories ...")
 	if cmdOut, err = runCmd(cmdName, cmdArgs); err != nil {
 		fmt.Println(err)
 	}

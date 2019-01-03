@@ -18,11 +18,12 @@ type AppHandler interface {
 func selectVersion(chart string) string {
 	var (
 		selectedVersion int
+		pkgCount        int
 	)
 	pkgs := helmbuddy.GetPkgs(chart)
-	if len(pkgs) == 0 {
-		fmt.Printf("No helm packages found, please check repo")
-		os.Exit(0)
+	pkgCount = len(pkgs)
+	if pkgCount <= 1 {
+		os.Exit(1)
 	}
 	color.Println("@cSelect version:")
 	for idx, version := range pkgs {
@@ -30,6 +31,10 @@ func selectVersion(chart string) string {
 	}
 	fmt.Print("select: ")
 	fmt.Scanln(&selectedVersion)
+	if selectedVersion-1 >= pkgCount || selectedVersion <= 0 {
+		color.Printf("@rInvalid selection\n")
+		os.Exit(1)
+	}
 	return pkgs[selectedVersion-1]
 }
 

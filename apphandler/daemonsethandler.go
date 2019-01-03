@@ -8,6 +8,7 @@ import (
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sbuddy"
 	"github.com/fiveateooate/deployinator/model"
+	"github.com/wsxiaoys/terminal/color"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -25,7 +26,6 @@ func (ds *DaemonsetHandler) getVersion(daemonset *appsv1.DaemonSet, appName stri
 		k8sVersion = re.FindStringSubmatch(container.Image)[1]
 		break
 	}
-	fmt.Println(k8sVersion)
 	return k8sVersion
 }
 
@@ -34,37 +34,26 @@ func (ds *DaemonsetHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *ku
 	var (
 		version         string
 		daemonset       *appsv1.DaemonSet
-		err             error
 		deployedVersion string
 	)
-	fmt.Printf("Getting info for %s\n", helmInfo.AppName)
-	daemonset, err = k8sbuddy.GetDaemonset(helmInfo.AppName, helmInfo.Namespace, clientset)
-	if err == nil {
-		fmt.Printf("Found k8s daemonset: %s\n", daemonset.Name)
-		deployedVersion = ds.getVersion(daemonset, helmInfo.AppName)
-	} else {
-		fmt.Println(err)
-	}
 	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
-	if helmInfo.ReleaseExists {
-		fmt.Printf("Found helm release: %s\n", helmInfo.ReleaseName)
-		if daemonset != nil {
-			version = selectVersion(helmInfo.Chart)
-			if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
-				fmt.Printf("Version %s is already installed\n", version)
-				return
-			}
-			fmt.Printf("Upgrading release %s\n", helmInfo.ReleaseName)
-			helmbuddy.HelmUpgrade(helmInfo, version)
-		} else {
-			fmt.Println("Something is not right DIE DIE DIE")
-			os.Exit(2)
+	daemonset = k8sbuddy.GetDaemonset(helmInfo.AppName, helmInfo.Namespace, clientset)
+	if helmInfo.ReleaseExists && daemonset != nil {
+		deployedVersion = ds.getVersion(daemonset, helmInfo.AppName)
+		version = selectVersion(helmInfo.Chart)
+		if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
+			color.Printf("@yVersion %s already running\n", version)
+			return
 		}
-	} else {
-		fmt.Printf("Installing %s\n", helmInfo.AppName)
+		color.Printf("@yUpgrading release %s\n", helmInfo.ReleaseName)
+		helmbuddy.HelmUpgrade(helmInfo, version)
+	} else if !helmInfo.ReleaseExists && daemonset == nil {
 		version = selectVersion(helmInfo.Chart)
 		fmt.Printf("Installing %s\n", helmInfo.Chart)
 		helmbuddy.HelmInstall(helmInfo, version)
+	} else {
+		color.Printf("@rDIE DIE DIE bad helm or k8s state")
+		os.Exit(2)
 	}
 }

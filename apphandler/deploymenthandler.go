@@ -34,36 +34,26 @@ func (dp *DeploymentHandler) ManageHelmApp(helmInfo model.HelmInfo, clientset *k
 	var (
 		version         string
 		deployment      *appsv1.Deployment
-		err             error
 		deployedVersion string
 	)
-	color.Printf("@cSearching for deployment ...")
-	deployment, err = k8sbuddy.GetDeployment(helmInfo.AppName, helmInfo.Namespace, clientset)
-	if err == nil {
-		color.Printf("found %s\n", deployment.Name)
-		deployedVersion = dp.getVersion(deployment, helmInfo.AppName)
-	} else {
-		fmt.Println(err)
-	}
 	helmbuddy.RepoUpdate(helmInfo)
 	helmbuddy.GetRelease(&helmInfo)
-	if helmInfo.ReleaseExists {
-		if deployment != nil {
-			version = selectVersion(helmInfo.Chart)
-			if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
-				fmt.Printf("Version %s is already installed\n", version)
-				return
-			}
-			color.Printf("@yUpgrading release %s\n", helmInfo.ReleaseName)
-			helmbuddy.HelmUpgrade(helmInfo, version)
-		} else {
-			color.Println("@rSomething is not right DIE DIE DIE")
-			os.Exit(2)
+	deployment = k8sbuddy.GetDeployment(helmInfo.AppName, helmInfo.Namespace, clientset)
+	if helmInfo.ReleaseExists && deployment != nil {
+		deployedVersion = dp.getVersion(deployment, helmInfo.AppName)
+		version = selectVersion(helmInfo.Chart)
+		if !checkVersion(deployedVersion, helmInfo.ReleaseVersion, version) {
+			color.Printf("@yVersion %s already running\n", version)
+			return
 		}
-	} else {
-		color.Printf("@yInstalling %s\n", helmInfo.AppName)
+		color.Printf("@yUpgrading release %s\n", helmInfo.ReleaseName)
+		helmbuddy.HelmUpgrade(helmInfo, version)
+	} else if !helmInfo.ReleaseExists && deployment == nil {
 		version = selectVersion(helmInfo.Chart)
 		fmt.Printf("Installing %s\n", helmInfo.Chart)
 		helmbuddy.HelmInstall(helmInfo, version)
+	} else {
+		color.Printf("@rDIE DIE DIE bad helm or k8s state")
+		os.Exit(2)
 	}
 }

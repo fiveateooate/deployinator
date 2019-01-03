@@ -3,6 +3,7 @@ package k8sbuddy
 import (
 	"fmt"
 
+	"github.com/wsxiaoys/terminal/color"
 	appsv1 "k8s.io/api/apps/v1"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,24 +11,45 @@ import (
 )
 
 // GetDaemonset return info on single deployment
-func GetDaemonset(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.DaemonSet, error) {
+func GetDaemonset(appName string, namespaceName string, clientset *kubernetes.Clientset) *appsv1.DaemonSet {
+	color.Printf("@cSearching for daemonset ...")
 	daemonsetClient := clientset.AppsV1().DaemonSets(namespaceName)
-	result, err := daemonsetClient.Get(appName, metav1.GetOptions{})
-	return result, err
+	tmp, err := daemonsetClient.Get(appName, metav1.GetOptions{})
+	if err == nil {
+		color.Printf("found %s\n", tmp.Name)
+	} else {
+		color.Printf("not found\n")
+		tmp = nil
+	}
+	return tmp
 }
 
-// GetDeployment return info on single deployment
-func GetDeployment(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.Deployment, error) {
+// GetDeployment load info for single deployment
+func GetDeployment(appName string, namespaceName string, clientset *kubernetes.Clientset) *appsv1.Deployment {
+	color.Printf("@cSearching for deployment ...")
 	deploymentsClient := clientset.AppsV1().Deployments(namespaceName)
-	result, err := deploymentsClient.Get(appName, metav1.GetOptions{})
-	return result, err
+	tmp, err := deploymentsClient.Get(appName, metav1.GetOptions{})
+	if err == nil {
+		color.Printf("found %s\n", tmp.Name)
+	} else {
+		color.Printf("not found\n")
+		tmp = nil
+	}
+	return tmp
 }
 
 // GetStatefulset return info on single deployment
-func GetStatefulset(appName string, namespaceName string, clientset *kubernetes.Clientset) (*appsv1.StatefulSet, error) {
+func GetStatefulset(appName string, namespaceName string, clientset *kubernetes.Clientset) *appsv1.StatefulSet {
+	color.Printf("@cSearching for Statefulset...")
 	statefulsetClient := clientset.AppsV1().StatefulSets(namespaceName)
-	result, err := statefulsetClient.Get(appName, metav1.GetOptions{})
-	return result, err
+	tmp, err := statefulsetClient.Get(appName, metav1.GetOptions{})
+	if err == nil {
+		color.Printf("found %s\n", tmp.Name)
+	} else {
+		color.Printf("not found\n")
+		tmp = nil
+	}
+	return tmp
 }
 
 // GetDeployments return list of all deployments in all namespaces
