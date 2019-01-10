@@ -4,16 +4,46 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/fiveateooate/deployinator/k8sbuddy"
+
 	"github.com/fiveateooate/deployinator/helmbuddy"
-	"github.com/fiveateooate/deployinator/model"
 	"github.com/wsxiaoys/terminal/color"
-	"k8s.io/client-go/kubernetes"
 )
+
+//App holds info for an app
+type App struct {
+	HelmInfo     *helmbuddy.HelmInfo
+	K8sApp       *k8sbuddy.K8sApp
+	DeployerType string
+}
 
 // AppHandler commect to get rid of lint
 type AppHandler interface {
-	ManageHelmApp(helmInfo model.HelmInfo, clientset *kubernetes.Clientset)
+	ManageApp()
 }
+
+// AbstractHandler - just for whatever
+type AbstractHandler struct {
+	Handler AppHandler
+	App     *App
+}
+
+// // HandleApp do stuff with an app
+// func (ah *AbstractHandler) HandleApp() {
+// 	fmt.Println("HandleApp")
+// 	switch ah.App.DeployerType {
+// 	case "helm":
+// 		if ah.App.K8sApp.DP != nil {
+// 			DeploymentHandler{}.Handler.ManageApp()
+// 		} else if ah.App.K8sApp.DS != nil {
+// 			DaemonsetHandler{}.Handler.ManageApp()
+// 		} else if ah.App.K8sApp.SS != nil {
+// 			StatefulsetHandler{}.Handler.ManageApp()
+// 		} else {
+// 			NullHandler{}.Handler.ManageApp()
+// 		}
+// 	}
+// }
 
 func selectVersion(chart string) string {
 	var (
@@ -22,7 +52,7 @@ func selectVersion(chart string) string {
 	)
 	pkgs := helmbuddy.GetPkgs(chart)
 	pkgCount = len(pkgs)
-	if pkgCount <= 1 {
+	if pkgCount < 1 {
 		os.Exit(1)
 	}
 	color.Println("@cSelect version:")
