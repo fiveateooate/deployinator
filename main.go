@@ -13,13 +13,22 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// func setKubeConfig(kubeconfig *string) *string {
-// 	if *kubeconfig == "" {
-// 		temp := fmt.Sprintf("%s/.kube/config", os.Getenv("HOME"))
-// 		kubeconfig = &temp
-// 	}
-// 	return kubeconfig
-// }
+func helmDeploy(app *apphandler.App) {
+	switch app.K8sApp.Kind {
+	case "deployment":
+		ah := apphandler.DeploymentHandler{App: app}
+		ah.ManageHelmApp()
+	case "daemonset":
+		ah := apphandler.DaemonsetHandler{App: app}
+		ah.ManageHelmApp()
+	case "statefulset":
+		ah := apphandler.StatefulsetHandler{App: app}
+		ah.ManageHelmApp()
+	default:
+		ah := apphandler.NullHandler{App: app}
+		ah.ManageApp()
+	}
+}
 
 func main() {
 	var (
@@ -39,7 +48,6 @@ func main() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	if *appName != "" {
-		// where should k8s stuff go?
 		clientset = k8sbuddy.Connect(*incluster, *context)
 		// choose deployer type
 		switch *deployerType {
@@ -50,20 +58,7 @@ func main() {
 
 			k8sApp.GetAppInfo(*appName, *namespaceName, clientset)
 			helmInfo.GetHelmInfo(*appName, *namespaceName, *helmRepo, *helmValues, *context)
-			switch k8sApp.Kind {
-			case "deployment":
-				ah := apphandler.DeploymentHandler{App: &app}
-				ah.ManageHelmApp()
-			case "daemonset":
-				ah := apphandler.DaemonsetHandler{App: &app}
-				ah.ManageHelmApp()
-			case "statefulset":
-				ah := apphandler.StatefulsetHandler{App: &app}
-				ah.ManageHelmApp()
-			default:
-				ah := apphandler.NullHandler{App: &app}
-				ah.ManageApp()
-			}
+			helmDeploy(&app)
 		case "newawesomedeployer":
 			fmt.Println("newawesomedeployer")
 		default:
@@ -85,49 +80,4 @@ func main() {
 		color.Println("@yEither appname or clusterconfig must be set")
 		os.Exit(1)
 	}
-	// where should k8s stuff go?
-	// clientset = connectK8s(*incluster, *context)
-	// ah := apphandler.AbstractHandler{}
-	// app := apphandler.App{}
-	// k8sApp := k8sbuddy.K8sApp{}
-	// // choose deployer type
-	// switch *deployerType {
-	// case "helm":
-	// 	helmInfo := helmbuddy.HelmInfo{}
-	// 	// if err := helmbuddy.CheckHelmSetup(*helmRepo, *helmURL); err != nil {
-	// 	// 	color.Printf("@rHelm setup incomplete: %s\n", err)
-	// 	// 	os.Exit(1)
-	// 	// }
-	// 	// if *helmValues != "" && !sharedfuncs.FileExists(*helmValues) {
-	// 	// 	os.Exit(2)
-	// 	// }
-	// 	// app.DeployerType = "helm"
-	// 	k8sApp.GetAppInfo(*appName, *namespaceName, clientset)
-	// 	helmInfo.GetHelmInfo(*appName, *namespaceName, *helmRepo, *helmValues, *context)
-	// 	helmbuddy.HelmHandler(helmInfo, k8sApp)
-	// 	// app.K8sApp = &k8sApp
-	// 	// app.HelmInfo = &helmInfo
-	// 	// ah.App = &app
-	// 	// // if *appName != "" {
-	// 	// // 	app.HandleApp()
-	// 	// switch *k8sapp.Kind {
-	// 	// case "deployment":
-	// 	// 	apphandler := apphandler.DeploymentHandler{}
-	// 	// case "daemonset":
-	// 	// 	apphandler := apphandler.DaemonsetHandler{}
-	// 	// case "statefulset":
-	// 	// 	apphandler := apphandler.StatefulsetHandler{}
-	// 	// default:
-	// 	// 	apphandler := apphandler.NullHander{}
-	// 	// }
-	// 	// apphandler.ManageHelmApp(helmInfo, clientset)
-	// 	// // }
-	// case "newawesomedeployer":
-	// 	app.DeployerType = "newawesomedeployer"
-	// default:
-	// 	app.DeployerType = ""
-	// }
-	// ah.HandleApp()
-	// color.Printf("@cDone\n")
-	// time.Sleep(30 * time.Second)
 }
