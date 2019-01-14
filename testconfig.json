@@ -1,0 +1,45 @@
+{
+	"local:andrew": {
+		"clusterDomain": "cluster.andrew.local",
+		"current_versions_file": "dev/versions.yaml",
+		"services": {
+			"namespaces": {
+				"kube-system": [
+					{
+						"chart": "weavelab/cluster-status"
+					},
+					{
+						"chart": "weavelab/traefik"
+					}
+				],
+				"ops": [
+					{
+						"chart": "weavelab/alertmanager",
+						"version": 1234
+					},
+					{
+						"chart": "weavelab/etcd3"
+					},
+					{
+						"chart": "weavelab/grafana"
+					},
+					{
+						"chart": "weavelab/kibana"
+					},
+					{
+						"chart": "weavelab/node-exporter"
+					},
+					{
+						"chart": "weavelab/postgresql-internal"
+					},
+					{
+						"chart": "weavelab/prometheus"
+					},
+					{
+						"chart": "weavelab/redis"
+					}
+				]
+			}
+		}
+	}
+}
