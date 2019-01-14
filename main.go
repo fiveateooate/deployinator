@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/fiveateooate/deployinator/apphandler"
+	"github.com/fiveateooate/deployinator/clusterconfig"
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sbuddy"
 	"github.com/wsxiaoys/terminal/color"
@@ -66,6 +67,8 @@ func main() {
 		}
 		color.Printf("@cDone\n")
 	} else if *clusterConfig != "" {
+		cc := clusterconfig.ClusterConfig{}
+		cc.ParseClusterConfig(*clusterConfig)
 		// handle continuous deploy from config
 		for {
 			// parseconfig
