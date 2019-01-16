@@ -1,0 +1,17 @@
+cenv: dev
+cid: place-1
+clusterDomain: cluster.local
+current_versions_file: some/path/versions.yaml
+deployments:
+  namespaces:
+    - name: kube-system
+      services:
+        - chart: bob
+          version: 5
+        - chart: joe
+          version: 10
+    - name: othernamespace
+      services:
+      - chart: bob1
+      - chart: steve1
+        deployertype: newawesomedeployer

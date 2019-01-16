@@ -67,11 +67,24 @@ func main() {
 		}
 		color.Printf("@cDone\n")
 	} else if *clusterConfig != "" {
-		cc := clusterconfig.ClusterConfig{}
-		cc.ParseClusterConfig(*clusterConfig)
 		// handle continuous deploy from config
 		for {
-			// parseconfig
+			cc := clusterconfig.ClusterConfig{}
+			cc.ParseClusterConfig(*clusterConfig)
+			for _, namespace := range cc.Deployment.Namespaces {
+				fmt.Printf("  %s\n", namespace.Name)
+				for _, service := range namespace.Services {
+					fmt.Printf("    chart: %s\n", service.Chart)
+					if service.Version != "" {
+						fmt.Printf("    version: %s\n", service.Version)
+					}
+					if service.DeployerType != "" {
+						fmt.Printf("    deployertype: %s\n", service.DeployerType)
+					} else {
+						fmt.Printf("    deployertype: %s\n", "helm")
+					}
+				}
+			}
 			// multideploy(config)
 			if *onetime {
 				break

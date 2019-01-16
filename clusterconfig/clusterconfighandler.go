@@ -10,24 +10,29 @@ import (
 
 // Service type holds info on a single service
 type Service struct {
-	Chart   string `yaml:"chart"`
-	Version string `yaml:"version"`
+	Chart        string `yaml:"chart"`
+	Version      string `yaml:"version"`
+	DeployerType string `yaml:"deployertype"`
 }
 
 // Namespace type info on service in a single namespace
 type Namespace struct {
-	Services []Service
+	Name     string    `yaml:"name"`
+	Services []Service `yaml:"services"`
+}
+
+// Deployment - list of namespaces and services to deplopy to them
+type Deployment struct {
+	Namespaces []Namespace `yaml:"namespaces"`
 }
 
 //ClusterConfig info on services that should be deployed in a cluster
 type ClusterConfig struct {
-	clusterName struct {
-		ClusterDomain       string `yaml:"clusterDomain"`
-		CurrentVersionsFile string `yaml:"current_versions_file"`
-		Services            struct {
-			Namespaces []Namespace
-		}
-	}
+	Cenv                string     `yaml:"cenv"`
+	Cid                 string     `yaml:"cid"`
+	ClusterDomain       string     `yaml:"clusterDomain"`
+	CurrentVersionsFile string     `yaml:"current_versions_file"`
+	Deployment          Deployment `yaml:"deployments"`
 }
 
 // ParseClusterConfig parse a file and return a map
@@ -37,7 +42,7 @@ func (cc *ClusterConfig) ParseClusterConfig(path string) {
 		return
 	}
 	data, _ := ioutil.ReadFile(path)
-	fmt.Println(string(data))
-	yaml.Unmarshal([]byte(data), cc)
-	fmt.Println(cc)
+	if err := yaml.Unmarshal([]byte(data), cc); err != nil {
+		fmt.Println(err)
+	}
 }
