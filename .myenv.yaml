@@ -1,0 +1,9 @@
+schema: "1"
+
+slug: "my-service" # No spaces or special characters and must be unique. This is used as the identifier
+name: "My SuperAwesome Service"
+owner: "service@example.com"
+repo: "docker.io/blah/poo"
+domain: "mydomain"
+slack: "#some-slack"
+helmrepo: "somehelmrepo"

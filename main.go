@@ -7,12 +7,17 @@ import (
 
 	"github.com/fiveateooate/deployinator/apphandler"
 	"github.com/fiveateooate/deployinator/clusterconfig"
+	"github.com/fiveateooate/deployinator/envfilehandler"
 	"github.com/fiveateooate/deployinator/helmbuddy"
 	"github.com/fiveateooate/deployinator/k8sbuddy"
 	"github.com/wsxiaoys/terminal/color"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/kubernetes"
 )
+
+//Deployinator - vars for this thing
+type Deployinator struct {
+}
 
 func helmDeploy(app *apphandler.App) {
 	switch app.K8sApp.Kind {
@@ -40,15 +45,24 @@ func main() {
 		appName       = app.Flag("appname", "Name of app to deploy").String()
 		namespaceName = app.Flag("namespace", "kubernetes namespace to use").String()
 		clusterConfig = app.Flag("clusterconfig", "Path to cluster config file").String()
-		helmRepo      = app.Flag("helmrepo", "Name of helm repo").Default("weavelabxyz").String()
-		// helmURL       = app.Flag("helmurl", "URL of helm repo").Default("https://adsfadsf").String()
+		helmRepo      = app.Flag("helmrepo", "Name of helm repo").String()
+		//helmURL       = app.Flag("helmurl", "URL of helm repo").String()
 		helmValues = app.Flag("helmvalues", "Path to helm values file").String()
 		onetime    = app.Flag("onetime", "Only run one time").Default("false").Bool()
+		envfile    = app.Flag("envfile", "Path to a file containing stuff").Envar("ENVFILE").String()
 		clientset  *kubernetes.Clientset
+		envVars    envfilehandler.Envfile
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	if *appName != "" {
+	if *envfile != "" {
+		envVars.LoadEnvfile(*envfile)
+		fmt.Println(envVars)
+	} else {
+		envVars.LoadFromFlags(*appName, *namespaceName, *helmRepo)
+	}
+
+	if envVars.Slug != "" {
 		clientset = k8sbuddy.Connect(*incluster, *context)
 		// choose deployer type
 		switch *deployerType {
@@ -57,8 +71,8 @@ func main() {
 			helmInfo := helmbuddy.HelmInfo{}
 			app := apphandler.App{K8sApp: &k8sApp, HelmInfo: &helmInfo, DeployerType: "helm"}
 
-			k8sApp.GetAppInfo(*appName, *namespaceName, clientset)
-			helmInfo.GetHelmInfo(*appName, *namespaceName, *helmRepo, *helmValues, *context)
+			k8sApp.GetAppInfo(envVars.Slug, envVars.Domain, clientset)
+			helmInfo.GetHelmInfo(envVars.Slug, envVars.Domain, envVars.HelmRepo, *helmValues, *context)
 			helmDeploy(&app)
 		case "newawesomedeployer":
 			fmt.Println("newawesomedeployer")
