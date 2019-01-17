@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/fiveateooate/deployinator/apphandler"
@@ -62,7 +63,44 @@ func main() {
 		envVars.LoadFromFlags(*appName, *namespaceName, *helmRepo)
 	}
 
-	if envVars.Slug != "" {
+	if *clusterConfig != "" {
+		// handle continuous deploy from config
+		for {
+			cc := clusterconfig.ClusterConfig{}
+			cc.ParseClusterConfig(*clusterConfig)
+			for _, namespace := range cc.Deployment.Namespaces {
+				fmt.Printf("  %s\n", namespace.Name)
+				for _, service := range namespace.Services {
+					name := strings.Replace(service.Chart, fmt.Sprintf("%s/", *helmRepo), "", -1)
+					if service.DeployerType == "" || service.DeployerType == "helm" {
+						envVars.LoadFromFlags(name, namespace.Name, *helmRepo)
+						k8sApp := k8sbuddy.K8sApp{}
+						helmInfo := helmbuddy.HelmInfo{}
+						app := apphandler.App{K8sApp: &k8sApp, HelmInfo: &helmInfo, DeployerType: "helm"}
+						k8sApp.GetAppInfo(envVars.Slug, envVars.Domain, clientset)
+						helmInfo.GetHelmInfo(envVars.Slug, envVars.Domain, envVars.HelmRepo, *helmValues, *context, *helmVersion)
+						helmDeploy(&app)
+					}
+					// fmt.Printf("Slug: %s\n", envVars.Slug)
+					// fmt.Printf("    chart: %s\n", service.Chart)
+					// if service.Version != "" {
+					// 	fmt.Printf("    version: %s\n", service.Version)
+					// }
+					// if service.DeployerType != "" {
+					// 	fmt.Printf("    deployertype: %s\n", service.DeployerType)
+					// } else {
+					// 	fmt.Printf("    deployertype: %s\n", "helm")
+					// }
+				}
+			}
+			// multideploy(config)
+			if *onetime {
+				break
+			}
+			color.Printf("@cDone\n")
+			time.Sleep(30 * time.Second)
+		}
+	} else if envVars.Slug != "" {
 		clientset = k8sbuddy.Connect(*incluster, *context)
 		// choose deployer type
 		switch *deployerType {
@@ -80,32 +118,6 @@ func main() {
 			fmt.Println("unknown deployer")
 		}
 		color.Printf("@cDone\n")
-	} else if *clusterConfig != "" {
-		// handle continuous deploy from config
-		for {
-			cc := clusterconfig.ClusterConfig{}
-			cc.ParseClusterConfig(*clusterConfig)
-			for _, namespace := range cc.Deployment.Namespaces {
-				fmt.Printf("  %s\n", namespace.Name)
-				for _, service := range namespace.Services {
-					fmt.Printf("    chart: %s\n", service.Chart)
-					if service.Version != "" {
-						fmt.Printf("    version: %s\n", service.Version)
-					}
-					if service.DeployerType != "" {
-						fmt.Printf("    deployertype: %s\n", service.DeployerType)
-					} else {
-						fmt.Printf("    deployertype: %s\n", "helm")
-					}
-				}
-			}
-			// multideploy(config)
-			if *onetime {
-				break
-			}
-			color.Printf("@cDone\n")
-			time.Sleep(30 * time.Second)
-		}
 	} else {
 		color.Println("@yEither appname or clusterconfig must be set")
 		os.Exit(1)

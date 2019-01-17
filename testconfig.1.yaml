@@ -6,12 +6,12 @@ deployments:
   namespaces:
     - name: kube-system
       services:
-        - chart: bob
+        - chart: myhelmrepo/bob
           version: 5
-        - chart: joe
+        - chart: myhelmrepo/joe
           version: 10
     - name: othernamespace
       services:
-      - chart: bob1
-      - chart: steve1
+      - chart: myhelmrepo/bob1
+      - chart: myhelmrepo/steve1
         deployertype: newawesomedeployer
