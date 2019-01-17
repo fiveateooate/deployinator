@@ -43,12 +43,13 @@ func (hi *HelmInfo) getRelease() {
 }
 
 // GetHelmInfo load up a helminfo
-func (hi *HelmInfo) GetHelmInfo(appname string, namespace string, repo string, values string, context string) {
+func (hi *HelmInfo) GetHelmInfo(appname string, namespace string, repo string, values string, context string, version string) {
 	hi.ValuesFile = values
 	hi.Repo = repo
 	hi.AppName = appname
 	hi.Namespace = namespace
 	hi.KubeContext = context
+	hi.Version = version
 	hi.Chart = fmt.Sprintf("%s/%s", repo, appname)
 	hi.getRelease()
 }

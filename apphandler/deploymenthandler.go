@@ -43,7 +43,10 @@ func (dp *DeploymentHandler) ManageHelmApp() {
 	// helmbuddy.GetRelease(dp.App.HelmInfo)
 	if dp.App.HelmInfo.ReleaseExists && dp.App.K8sApp.DP != nil {
 		deployedVersion = dp.getVersion(dp.App.K8sApp.DP, dp.App.HelmInfo.AppName)
-		version = selectVersion(dp.App.HelmInfo.Chart)
+		version = dp.App.HelmInfo.Version
+		if version == "" {
+			version = selectVersion(dp.App.HelmInfo.Chart)
+		}
 		if !checkVersion(deployedVersion, dp.App.HelmInfo.ReleaseVersion, version) {
 			color.Printf("@yVersion %s already running\n", version)
 			return

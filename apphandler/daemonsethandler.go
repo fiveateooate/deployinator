@@ -42,7 +42,10 @@ func (ds *DaemonsetHandler) ManageHelmApp() {
 	ds.App.HelmInfo.RepoUpdate()
 	if ds.App.HelmInfo.ReleaseExists && ds.App.K8sApp.DS != nil {
 		deployedVersion = ds.getVersion(ds.App.K8sApp.DS, ds.App.HelmInfo.AppName)
-		version = selectVersion(ds.App.HelmInfo.Chart)
+		version = ds.App.HelmInfo.Version
+		if version == "" {
+			version = selectVersion(ds.App.HelmInfo.Chart)
+		}
 		if !checkVersion(deployedVersion, ds.App.HelmInfo.ReleaseVersion, version) {
 			color.Printf("@yVersion %s already running\n", version)
 			return

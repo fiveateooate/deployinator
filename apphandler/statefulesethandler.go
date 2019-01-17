@@ -42,7 +42,10 @@ func (ss *StatefulsetHandler) ManageHelmApp() {
 	ss.App.HelmInfo.RepoUpdate()
 	if ss.App.HelmInfo.ReleaseExists && ss.App.K8sApp.SS != nil {
 		deployedVersion = ss.getVersion(ss.App.K8sApp.SS, ss.App.HelmInfo.AppName)
-		version = selectVersion(ss.App.HelmInfo.Chart)
+		version = ss.App.HelmInfo.Version
+		if version == "" {
+			version = selectVersion(ss.App.HelmInfo.Chart)
+		}
 		if !checkVersion(deployedVersion, ss.App.HelmInfo.ReleaseVersion, version) {
 			color.Printf("@yVersion %s already running\n", version)
 			return

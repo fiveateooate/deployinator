@@ -47,17 +47,17 @@ func main() {
 		clusterConfig = app.Flag("clusterconfig", "Path to cluster config file").String()
 		helmRepo      = app.Flag("helmrepo", "Name of helm repo").String()
 		//helmURL       = app.Flag("helmurl", "URL of helm repo").String()
-		helmValues = app.Flag("helmvalues", "Path to helm values file").String()
-		onetime    = app.Flag("onetime", "Only run one time").Default("false").Bool()
-		envfile    = app.Flag("envfile", "Path to a file containing stuff").Envar("ENVFILE").String()
-		clientset  *kubernetes.Clientset
-		envVars    envfilehandler.Envfile
+		helmValues  = app.Flag("helmvalues", "Path to helm values file").String()
+		helmVersion = app.Flag("helmversion", "Version to install from helm repo").String()
+		onetime     = app.Flag("onetime", "Only run one time").Default("false").Bool()
+		envfile     = app.Flag("envfile", "Path to a file containing stuff").Envar("ENVFILE").String()
+		clientset   *kubernetes.Clientset
+		envVars     envfilehandler.Envfile
 	)
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	if *envfile != "" {
 		envVars.LoadEnvfile(*envfile)
-		fmt.Println(envVars)
 	} else {
 		envVars.LoadFromFlags(*appName, *namespaceName, *helmRepo)
 	}
@@ -72,7 +72,7 @@ func main() {
 			app := apphandler.App{K8sApp: &k8sApp, HelmInfo: &helmInfo, DeployerType: "helm"}
 
 			k8sApp.GetAppInfo(envVars.Slug, envVars.Domain, clientset)
-			helmInfo.GetHelmInfo(envVars.Slug, envVars.Domain, envVars.HelmRepo, *helmValues, *context)
+			helmInfo.GetHelmInfo(envVars.Slug, envVars.Domain, envVars.HelmRepo, *helmValues, *context, *helmVersion)
 			helmDeploy(&app)
 		case "newawesomedeployer":
 			fmt.Println("newawesomedeployer")
