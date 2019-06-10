@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package deployproto;
+
+service Deployinator {
+  rpc DeployService(DeployMessage) returns (DeployResponse) {}
+}
+message DeployMessage {
+  string name = 1;
+  string namespace = 2;
+  string version = 3;
+  string domain = 4;
+  string cenv = 5;
+  string status = 6;
+  string summary = 7;
+  string enabled = 8;
+}
+
+message DeployResponse { string success = 1; }

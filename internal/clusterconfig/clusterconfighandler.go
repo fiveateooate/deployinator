@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/fiveateooate/deployinator/common"
+	sharedfuncs "github.com/fiveateooate/deployinator/internal/common"
 	yaml "gopkg.in/yaml.v2"
 )
 

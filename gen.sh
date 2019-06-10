@@ -1,0 +1,1 @@
+protoc -I deployproto/ deployproto/deployproto.proto --go_out=plugins=grpc:deployproto

@@ -16,9 +16,35 @@ package cmd
 
 import (
 	"fmt"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/fiveateooate/deployinator/internal/pubsubclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+func clientCleanup(cli *pubsubclient.PubSubClient) {
+	log.Println("Stopping Deplopyinator Client")
+	cli.Disconnect()
+}
+
+func runClient(host string) {
+	c := make(chan os.Signal, 1)
+	cli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: viper.GetString("topicName")}
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		clientCleanup(&cli)
+	}()
+	log.Printf("Starting Deployinator Client\n")
+	log.Printf("topic: %s project: %s", viper.GetString("topicName"), viper.GetString("projectID"))
+	cli.Connect()
+	cli.Subscribe()
+	cli.GetMessage()
+}
 
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
@@ -31,20 +57,17 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("client called")
+		host := fmt.Sprintf("%s:%s", viper.GetString("serverAddr"), viper.GetString("serverPort"))
+		runClient(host)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(clientCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// clientCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// clientCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	clientCmd.Flags().String("server-addr", "127.0.0.1", "server address")
+	viper.BindPFlag("serverAddr", clientCmd.Flags().Lookup("server-addr"))
+	clientCmd.Flags().Int("server-port", 9091, "server port")
+	viper.BindPFlag("serverPort", clientCmd.Flags().Lookup("server-port"))
+	clientCmd.Flags().String("cmd", "", "add an alert")
+	viper.BindPFlag("cmd", clientCmd.Flags().Lookup("cmd"))
 }

@@ -15,10 +15,62 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
+	pb "github.com/fiveateooate/deployinator/deployproto"
+	"github.com/fiveateooate/deployinator/internal/pubsubclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"google.golang.org/grpc"
 )
+
+type deployinatorServer struct{}
+
+func cleanup(server *grpc.Server) {
+	log.Println("Stopping Deployinator Server")
+	server.Stop()
+}
+
+func newDeployinatorServer() pb.DeployinatorServer {
+	return &deployinatorServer{}
+}
+
+func (ds *deployinatorServer) DeployService(ctx context.Context, in *pb.DeployMessage) (*pb.DeployResponse, error) {
+	response := new(pb.DeployResponse)
+	response.Success = "pass"
+	log.Println(in)
+	cli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: viper.GetString("topicName")}
+	cli.Connect()
+	cli.Publish(in)
+	log.Println("done")
+	return response, nil
+}
+
+func runServer(listentAddr string, listenPort string) {
+	c := make(chan os.Signal, 1)
+	server := grpc.NewServer()
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-c
+		cleanup(server)
+	}()
+	log.Println("Starting Deployinator Server")
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", listentAddr, listenPort))
+	if err != nil {
+		log.Fatalf("Failed to listen: %v", err)
+	}
+	pb.RegisterDeployinatorServer(server, newDeployinatorServer())
+	if err := server.Serve(lis); err != nil {
+		log.Fatalf("Failed to serve: %v", err)
+	}
+	log.Println("Goodbye from Deployinator Server")
+}
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -31,20 +83,14 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("server called")
+		runServer(viper.GetString("listenAddr"), viper.GetString("port"))
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// serverCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	serverCmd.Flags().String("listen-addr", "0.0.0.0", "listen address")
+	viper.BindPFlag("listenAddr", serverCmd.Flags().Lookup("listen-addr"))
+	serverCmd.Flags().Int("port", 9091, "listen port")
+	viper.BindPFlag("listenPort", serverCmd.Flags().Lookup("port"))
 }
