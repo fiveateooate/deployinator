@@ -95,7 +95,7 @@ func (qcli *PubSubClient) getTopic() error {
 }
 
 // Publish - add some something
-func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) {
+func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) error {
 	var results []*pubsub.PublishResult
 	data, _ := proto.Marshal(alert)
 	msg := &pubsub.Message{Data: data}
@@ -108,14 +108,15 @@ func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) {
 	result := qcli.MyTopic.Publish(qcli.CTX, msg)
 	log.Println(result)
 	results = append(results, result)
-	// Do other work ...
 	for _, r := range results {
 		id, err := r.Get(qcli.CTX)
 		if err != nil {
 			log.Println(err)
+			return err
 		}
 		fmt.Printf("Published a message with a message ID: %s\n", id)
 	}
+	return nil
 }
 
 func (qcli *PubSubClient) subName() string {
@@ -161,7 +162,7 @@ func processMessage(ctx context.Context, msg *pubsub.Message) {
 }
 
 // GetMessage - get a message?
-func (qcli *PubSubClient) GetMessage() {
+func (qcli *PubSubClient) GetMessage(p func(context.Context, pubsub.Message)) {
 	err := qcli.MySub.Receive(qcli.CTX, processMessage)
 	if err != nil {
 		log.Println(err)

@@ -26,6 +26,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+// deployService - deploy a service and stream messages
+// publish status messages to deploystatus topic
+func deployService() error {
+	return nil
+}
+
 func clientCleanup(cli *pubsubclient.PubSubClient) {
 	log.Println("Stopping Deplopyinator Client")
 	cli.Disconnect()
@@ -42,6 +48,7 @@ func runClient(host string) {
 	log.Printf("Starting Deployinator Client\n")
 	log.Printf("topic: %s project: %s", viper.GetString("topicName"), viper.GetString("projectID"))
 	cli.Connect()
+	// probably need to pass a handle func
 	cli.Subscribe()
 	cli.GetMessage()
 }
@@ -49,13 +56,13 @@ func runClient(host string) {
 // clientCmd represents the client command
 var clientCmd = &cobra.Command{
 	Use:   "client",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "run the deployinator client",
+	Long: `twoish modes, probably dumb
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	1. subscribe to a deploy queue for specific cluster and deploy stuff
+		in this mode runs in whatever/every/all/your base k8s(kates ! k-eights) clusters
+	2. send deploy trigger to deployinator server and wait for responses
+		in this mode it should run in same k8s(kates ! k-eights) cluster as server`,
 	Run: func(cmd *cobra.Command, args []string) {
 		host := fmt.Sprintf("%s:%s", viper.GetString("serverAddr"), viper.GetString("serverPort"))
 		runClient(host)

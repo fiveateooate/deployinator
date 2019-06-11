@@ -23,14 +23,27 @@ import (
 	"os/signal"
 	"syscall"
 
+	"cloud.google.com/go/pubsub"
 	pb "github.com/fiveateooate/deployinator/deployproto"
 	"github.com/fiveateooate/deployinator/internal/pubsubclient"
+	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"google.golang.org/grpc"
 )
 
 type deployinatorServer struct{}
+
+func processMessage(ctx context.Context, msg *pubsub.Message) {
+	var message pb.DeployMessage
+	err := proto.Unmarshal(msg.Data, &message)
+	if err != nil {
+		log.Printf("Error: %v", err)
+	}
+	log.Printf("Name: %s, Namespace: %s.\n", message.Name, message.Namespace)
+	msg.Ack()
+	return
+}
 
 func cleanup(server *grpc.Server) {
 	log.Println("Stopping Deployinator Server")
@@ -41,22 +54,33 @@ func newDeployinatorServer() pb.DeployinatorServer {
 	return &deployinatorServer{}
 }
 
-func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMessage) (*pb.DeployResponse, error) {
-	response := new(pb.DeployResponse)
-	response.Success = "pass"
+// send a message to pubsub
+// sub to deploy status and stream messages back
+func (ds *deployinatorServer) TriggerDeploy(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer) error {
+	response := new(pb.DeployStatusMessage)
+	response.Status = "deploying"
 	log.Println(in)
 	topicName := fmt.Sprintf("%s", in.Cenv)
 	cli := pubsubclient.PubSubClient{ProjectID: in.ProjectID, TopicName: topicName}
 	cli.Connect()
-	cli.Publish(in)
-	cli.Stop()
-	return response, nil
+	if err := cli.Publish(in); err != nil {
+		return err
+	}
+	cli.TopicName = "the-deploystatus-topic"
+	if err := cli.Subscribe(); err != nil {
+		return err
+	}
+	handlerFunc := processMessage
+	cli.GetMessage(handlerFunc)
+	// is this needed - cli.Stop()
+	// now if pub successful stream deploystatus messages back
+	return nil
 }
 
-func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
-	response := new(pb.DeployStatusMessage)
-	return response, nil
-}
+// func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
+// 	response := new(pb.DeployStatusMessage)
+// 	return response, nil
+// }
 
 func runServer(listentAddr string, listenPort string) {
 	c := make(chan os.Signal, 1)
@@ -81,13 +105,15 @@ func runServer(listentAddr string, listenPort string) {
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
 	Use:   "server",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "run the deployinator server",
+	Long: `Deployinator Server
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	listens for deploy events
+	sends events to pubsub
+	listens for responses
+	streams them back
+	
+	future - states in places?`,
 	Run: func(cmd *cobra.Command, args []string) {
 		runServer(viper.GetString("listenAddr"), viper.GetString("port"))
 	},
