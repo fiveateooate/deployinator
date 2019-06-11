@@ -3,7 +3,8 @@ syntax = "proto3";
 package deployproto;
 
 service Deployinator {
-  rpc DeployService(DeployMessage) returns (DeployResponse) {}
+  rpc TriggerDeploy(DeployMessage) returns (DeployResponse) {}
+  rpc DeployStatus(DeployMessage) returns (DeployStatusMessage) {}
 }
 message DeployMessage {
   string name = 1;
@@ -11,9 +12,13 @@ message DeployMessage {
   string version = 3;
   string domain = 4;
   string cenv = 5;
-  string status = 6;
-  string summary = 7;
-  string enabled = 8;
+  string projectID = 6;
+}
+
+message DeployStatusMessage {
+  string status = 1;
+  string runningversion = 2;
+  string other = 3;
 }
 
 message DeployResponse { string success = 1; }

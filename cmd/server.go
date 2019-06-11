@@ -41,14 +41,20 @@ func newDeployinatorServer() pb.DeployinatorServer {
 	return &deployinatorServer{}
 }
 
-func (ds *deployinatorServer) DeployService(ctx context.Context, in *pb.DeployMessage) (*pb.DeployResponse, error) {
+func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMessage) (*pb.DeployResponse, error) {
 	response := new(pb.DeployResponse)
 	response.Success = "pass"
 	log.Println(in)
-	cli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: viper.GetString("topicName")}
+	topicName := fmt.Sprintf("%s", in.Cenv)
+	cli := pubsubclient.PubSubClient{ProjectID: in.ProjectID, TopicName: topicName}
 	cli.Connect()
 	cli.Publish(in)
-	log.Println("done")
+	cli.Stop()
+	return response, nil
+}
+
+func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
+	response := new(pb.DeployStatusMessage)
 	return response, nil
 }
 
