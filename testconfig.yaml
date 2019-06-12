@@ -1,17 +1,6 @@
-local:andrew:
-  clusterDomain: cluster.andrew.local
-  current_versions_file: dev/versions.yaml
-  services:
-    namespaces:
-      kube-system:
-      - chart: weavelab/cluster-status
-      - chart: weavelab/traefik
-      ops:
-      - chart: weavelab/alertmanager
-      - chart: weavelab/etcd3
-      - chart: weavelab/grafana
-      - chart: weavelab/kibana
-      - chart: weavelab/node-exporter
-      - chart: weavelab/postgresql-internal
-      - chart: weavelab/prometheus
-      - chart: weavelab/redis
+serverAddr: 127.0.0.1
+listenAddr: 0.0.0.0
+listenPort: 9091
+serverPort: 9091
+cenv: weave-h
+cid: gke1

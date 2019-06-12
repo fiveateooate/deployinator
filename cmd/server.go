@@ -33,17 +33,7 @@ import (
 )
 
 type deployinatorServer struct{}
-
-func processMessage(ctx context.Context, msg *pubsub.Message) {
-	var message pb.DeployMessage
-	err := proto.Unmarshal(msg.Data, &message)
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-	log.Printf("Name: %s, Namespace: %s.\n", message.Name, message.Namespace)
-	msg.Ack()
-	return
-}
+type contextKey string
 
 func cleanup(server *grpc.Server) {
 	log.Println("Stopping Deployinator Server")
@@ -54,35 +44,71 @@ func newDeployinatorServer() pb.DeployinatorServer {
 	return &deployinatorServer{}
 }
 
+func processServerMessage(ctx context.Context, msg *pubsub.Message) {
+	var message pb.DeployStatusMessage
+	stream := ctx.Value("stream")
+	err := proto.Unmarshal(msg.Data, &message)
+	if err != nil {
+		log.Printf("Error: %v", err)
+	}
+	message.Status = fmt.Sprintf("Status: %s, MsgID: %s.\n", message.Status, message.MsgID)
+	stream.Send(message)
+	msg.Ack()
+	return
+}
+
 // send a message to pubsub
 // sub to deploy status and stream messages back
 func (ds *deployinatorServer) TriggerDeploy(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer) error {
+	// log.Printf("triggering a deploy\n")
 	response := new(pb.DeployStatusMessage)
-	response.Status = "deploying"
-	log.Println(in)
-	topicName := fmt.Sprintf("%s", in.Cenv)
-	cli := pubsubclient.PubSubClient{ProjectID: in.ProjectID, TopicName: topicName}
+	response.Status = "Starting deploy"
+	stream.Send(response)
+	// log.Println(in)
+	topicName := fmt.Sprintf("%s-%s-deploy", in.Cenv, in.Cid)
+	response.Status = fmt.Sprintf("Connecting to topic %s", topicName)
+	stream.Send(response)
+	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
 	cli.Connect()
-	if err := cli.Publish(in); err != nil {
+	response.Status = fmt.Sprintf("Connected to topic %s", topicName)
+	stream.Send(response)
+	msgid, err := cli.Publish(in)
+
+	if err != nil {
+		log.Println(err)
 		return err
 	}
-	cli.TopicName = "the-deploystatus-topic"
+	response.Status = fmt.Sprintf("Published %v to %s", in, topicName)
+	stream.Send(response)
+	cli.TopicName = fmt.Sprintf("%s-%s-deploystatus", in.Cenv, in.Cid)
 	if err := cli.Subscribe(); err != nil {
+		log.Println(err)
 		return err
 	}
-	handlerFunc := processMessage
-	cli.GetMessage(handlerFunc)
-	// is this needed - cli.Stop()
+	response.Status = fmt.Sprintf("Subscribed to %s", cli.TopicName)
+	stream.Send(response)
+
+	if msgid == response.MsgID {
+		stream.Send(response)
+	}
+
+	k := contextKey("stream")
+	cli.CTX = context.WithValue(context.Background(), k, &stream)
 	// now if pub successful stream deploystatus messages back
+	cli.GetMessage(processServerMessage)
+	stream.Send(response)
+	// is this needed? - cli.Stop()
 	return nil
 }
 
-// func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
-// 	response := new(pb.DeployStatusMessage)
-// 	return response, nil
-// }
+func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
+	log.Printf("DeployStatus\n")
+	response := new(pb.DeployStatusMessage)
+	response.Status = "deploy status"
+	return response, nil
+}
 
-func runServer(listentAddr string, listenPort string) {
+func runServer(listentAddr string, port string) {
 	c := make(chan os.Signal, 1)
 	server := grpc.NewServer()
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -90,8 +116,8 @@ func runServer(listentAddr string, listenPort string) {
 		<-c
 		cleanup(server)
 	}()
-	log.Println("Starting Deployinator Server")
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", listentAddr, listenPort))
+	log.Printf("Starting Deployinator Server: %s:%s\n", listentAddr, port)
+	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%s", listentAddr, port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -124,5 +150,5 @@ func init() {
 	serverCmd.Flags().String("listen-addr", "0.0.0.0", "listen address")
 	viper.BindPFlag("listenAddr", serverCmd.Flags().Lookup("listen-addr"))
 	serverCmd.Flags().Int("port", 9091, "listen port")
-	viper.BindPFlag("listenPort", serverCmd.Flags().Lookup("port"))
+	viper.BindPFlag("port", serverCmd.Flags().Lookup("port"))
 }

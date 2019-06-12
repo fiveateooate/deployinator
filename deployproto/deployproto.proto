@@ -4,7 +4,7 @@ package deployproto;
 
 service Deployinator {
   rpc TriggerDeploy(DeployMessage) returns (stream DeployStatusMessage) {}
-  // rpc DeployStatus(DeployMessage) returns (DeployStatusMessage) {}
+  rpc DeployStatus(DeployMessage) returns (DeployStatusMessage) {}
 }
 message DeployMessage {
   string name = 1;
@@ -12,13 +12,15 @@ message DeployMessage {
   string version = 3;
   string domain = 4;
   string cenv = 5;
-  string projectID = 6;
+  string cid = 6;
 }
 
 message DeployStatusMessage {
   string status = 1;
   string runningversion = 2;
-  string other = 3;
+  string requestedversion = 3;
+  string msgID = 4;
+  string other = 5;
 }
 
 message DeployResponse { string success = 1; }

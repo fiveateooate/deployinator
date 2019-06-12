@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"math/rand"
 	"time"
 
 	"cloud.google.com/go/pubsub"
 	pb "github.com/fiveateooate/deployinator/deployproto"
+	sharedfuncs "github.com/fiveateooate/deployinator/internal/common"
 	"github.com/golang/protobuf/proto"
 	google "golang.org/x/oauth2/google"
 	"google.golang.org/api/iterator"
@@ -28,11 +28,7 @@ type PubSubClient struct {
 	MySub          *pubsub.Subscription
 }
 
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-)
+type messageHandler func(context.Context, *pubsub.Message)
 
 // Connect - connect the client
 func (qcli *PubSubClient) Connect() {
@@ -40,7 +36,6 @@ func (qcli *PubSubClient) Connect() {
 		err error
 	)
 	qcli.CTX, qcli.Cancel = context.WithCancel(context.Background())
-	qcli.SubName = qcli.subName()
 
 	creds, err := google.FindDefaultCredentials(qcli.CTX, pubsub.ScopePubSub)
 	if err != nil {
@@ -90,14 +85,15 @@ func (qcli *PubSubClient) getTopic() error {
 		qcli.MyTopic, err = qcli.cli.CreateTopic(qcli.CTX, qcli.TopicName)
 		return err
 	}
-	log.Println(qcli.MyTopic)
+	// log.Println(qcli.MyTopic)
 	return nil
 }
 
 // Publish - add some something
-func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) error {
+func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) (string, error) {
 	var results []*pubsub.PublishResult
 	data, _ := proto.Marshal(alert)
+	msgid := ""
 	msg := &pubsub.Message{Data: data}
 
 	qcli.MyTopic.PublishSettings = pubsub.PublishSettings{
@@ -106,35 +102,51 @@ func (qcli *PubSubClient) Publish(alert *pb.DeployMessage) error {
 		DelayThreshold: 100 * time.Millisecond,
 	}
 	result := qcli.MyTopic.Publish(qcli.CTX, msg)
-	log.Println(result)
+	// log.Println(result)
 	results = append(results, result)
 	for _, r := range results {
 		id, err := r.Get(qcli.CTX)
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		}
-		fmt.Printf("Published a message with a message ID: %s\n", id)
+		msgid = id
+		// fmt.Printf("Published a message with a message ID: %s\n", id)
 	}
-	return nil
+	return msgid, nil
 }
 
-func (qcli *PubSubClient) subName() string {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	n := 12
-	b := make([]byte, n)
-	for i := 0; i < n; {
-		if idx := int(s1.Int63() & letterIdxMask); idx < len(letterBytes) {
-			b[i] = letterBytes[idx]
-			i++
-		}
+// PublishResponse - add some something
+func (qcli *PubSubClient) PublishResponse(deploystatus *pb.DeployStatusMessage) (string, error) {
+	var results []*pubsub.PublishResult
+	msgid := ""
+	data, _ := proto.Marshal(deploystatus)
+	msg := &pubsub.Message{Data: data}
+
+	qcli.MyTopic.PublishSettings = pubsub.PublishSettings{
+		ByteThreshold:  5000,
+		CountThreshold: 10,
+		DelayThreshold: 100 * time.Millisecond,
 	}
-	return fmt.Sprintf("%s-sub-%s", qcli.TopicName, string(b))
+	result := qcli.MyTopic.Publish(qcli.CTX, msg)
+	// log.Println(result)
+	results = append(results, result)
+	for _, r := range results {
+		id, err := r.Get(qcli.CTX)
+		if err != nil {
+			log.Println(err)
+			return "", err
+		}
+		msgid = id
+		// fmt.Printf("Published a message with a message ID: %s\n", id)
+	}
+	return msgid, nil
 }
 
 // Subscribe - do that to a topic
 func (qcli *PubSubClient) Subscribe() error {
-	log.Printf("topic: %s\n", qcli.TopicName)
+	// log.Printf("topic: %s\n", qcli.TopicName)
+	qcli.SubName = fmt.Sprintf("%s-%s", qcli.TopicName, sharedfuncs.RandString(12))
 	qcli.MySub = qcli.cli.Subscription(qcli.SubName)
 	exists, err := qcli.MySub.Exists(qcli.CTX)
 	if err != nil {
@@ -146,24 +158,13 @@ func (qcli *PubSubClient) Subscribe() error {
 			log.Fatalf("Failed to create subscription: %v", err)
 		}
 	}
-	log.Println(qcli.MySub)
+	// log.Println(qcli.MySub)
 	return nil
 }
 
-func processMessage(ctx context.Context, msg *pubsub.Message) {
-	var message pb.DeployMessage
-	err := proto.Unmarshal(msg.Data, &message)
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-	log.Printf("Name: %s, Namespace: %s.\n", message.Name, message.Namespace)
-	msg.Ack()
-	return
-}
-
 // GetMessage - get a message?
-func (qcli *PubSubClient) GetMessage(p func(context.Context, pubsub.Message)) {
-	err := qcli.MySub.Receive(qcli.CTX, processMessage)
+func (qcli *PubSubClient) GetMessage(fn messageHandler) {
+	err := qcli.MySub.Receive(qcli.CTX, fn)
 	if err != nil {
 		log.Println(err)
 		return
