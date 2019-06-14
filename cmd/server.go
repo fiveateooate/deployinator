@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"cloud.google.com/go/pubsub"
 	pb "github.com/fiveateooate/deployinator/deployproto"
@@ -46,58 +47,86 @@ func newDeployinatorServer() pb.DeployinatorServer {
 
 func processServerMessage(ctx context.Context, msg *pubsub.Message) {
 	var message pb.DeployStatusMessage
-	stream := ctx.Value("stream")
 	err := proto.Unmarshal(msg.Data, &message)
 	if err != nil {
 		log.Printf("Error: %v", err)
 	}
 	message.Status = fmt.Sprintf("Status: %s, MsgID: %s.\n", message.Status, message.MsgID)
-	stream.Send(message)
 	msg.Ack()
 	return
 }
 
-// send a message to pubsub
-// sub to deploy status and stream messages back
-func (ds *deployinatorServer) TriggerDeploy(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer) error {
-	// log.Printf("triggering a deploy\n")
-	response := new(pb.DeployStatusMessage)
-	response.Status = "Starting deploy"
-	stream.Send(response)
-	// log.Println(in)
-	topicName := fmt.Sprintf("%s-%s-deploy", in.Cenv, in.Cid)
-	response.Status = fmt.Sprintf("Connecting to topic %s", topicName)
-	stream.Send(response)
-	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
-	cli.Connect()
-	response.Status = fmt.Sprintf("Connected to topic %s", topicName)
-	stream.Send(response)
-	msgid, err := cli.Publish(in)
-
-	if err != nil {
-		log.Println(err)
-		return err
+func waitTopicExists(pscli *pubsubclient.PubSubClient) bool {
+	for i := 0; i < 10; i++ {
+		if pscli.Exists() {
+			return true
+		}
+		time.Sleep(5 * time.Second)
 	}
-	response.Status = fmt.Sprintf("Published %v to %s", in, topicName)
+	return false
+}
+
+func getDeployResponses(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer, msgid string) error {
+	response := new(pb.DeployStatusMessage)
+	topicName := fmt.Sprintf("%s-%s-deploystatus-%s", in.Cenv, in.Cid, msgid)
+	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
+	cli.NewClient()
+	if exists := waitTopicExists(&cli); exists == false {
+		return fmt.Errorf("topic didn't exists or something")
+	}
+	cli.SetTopic()
+	response.Status = fmt.Sprintf("Subscribing to %s", cli.TopicName)
 	stream.Send(response)
-	cli.TopicName = fmt.Sprintf("%s-%s-deploystatus", in.Cenv, in.Cid)
 	if err := cli.Subscribe(); err != nil {
 		log.Println(err)
 		return err
 	}
 	response.Status = fmt.Sprintf("Subscribed to %s", cli.TopicName)
 	stream.Send(response)
+	// cli.GetMessage(processServerMessage)
+	cli.Pull()
+	// msg, err := cli.Pull()
+	// if err != nil {
+	// 	response.Status = fmt.Sprintln(err)
+	// 	stream.Send(response)
+	// 	return err
+	// }
+	// response.Status = fmt.Sprintf("Recieved messageID: %s - %s", msg.ID, msg.Data)
+	// stream.Send(response)
+	// proto.Unmarshal(msg.Data, response)
+	// if msgid == response.MsgID {
+	// 	stream.Send(response)
+	// } else {
+	// 	response.Status = "not our message"
+	// 	stream.Send(response)
+	// }
+	// // cli.Delete()
+	return nil
+}
 
-	if msgid == response.MsgID {
-		stream.Send(response)
-	}
-
-	k := contextKey("stream")
-	cli.CTX = context.WithValue(context.Background(), k, &stream)
-	// now if pub successful stream deploystatus messages back
-	cli.GetMessage(processServerMessage)
+// send a message to pubsub
+// sub to deploy status and stream messages back
+func (ds *deployinatorServer) TriggerDeploy(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer) error {
+	response := new(pb.DeployStatusMessage)
+	response.Status = "Starting deploy"
 	stream.Send(response)
-	// is this needed? - cli.Stop()
+	topicName := fmt.Sprintf("%s-%s-deploy", in.Cenv, in.Cid)
+	response.Status = fmt.Sprintf("Connecting to topic %s", topicName)
+	stream.Send(response)
+	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
+	cli.NewClient()
+	cli.SetTopic()
+	response.Status = fmt.Sprintf("Connected to topic %s", topicName)
+	stream.Send(response)
+	msgid, err := cli.Publish(in)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	response.Status = fmt.Sprintf("Published %v to %s", in, topicName)
+	stream.Send(response)
+	cli.Stop()
+	getDeployResponses(in, stream, msgid)
 	return nil
 }
 

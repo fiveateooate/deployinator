@@ -13,6 +13,7 @@ import (
 	google "golang.org/x/oauth2/google"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	// pubsub "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 // PubSubClient holds queue related stuff
@@ -30,8 +31,8 @@ type PubSubClient struct {
 
 type messageHandler func(context.Context, *pubsub.Message)
 
-// Connect - connect the client
-func (qcli *PubSubClient) Connect() {
+// NewClient - connect the client
+func (qcli *PubSubClient) NewClient() {
 	var (
 		err error
 	)
@@ -45,7 +46,6 @@ func (qcli *PubSubClient) Connect() {
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
-	qcli.getTopic()
 }
 
 // List - idk ... things
@@ -64,28 +64,30 @@ func (qcli *PubSubClient) List() {
 	}
 }
 
-func (qcli *PubSubClient) exists() bool {
+// Exists - returns true if topic exists
+func (qcli *PubSubClient) Exists() bool {
 	qcli.MyTopic = qcli.cli.Topic(qcli.TopicName)
-	exists, _ := qcli.MyTopic.Exists(qcli.CTX)
+	exists, err := qcli.MyTopic.Exists(qcli.CTX)
+	if err != nil {
+		log.Printf("exists error: %v", err)
+	}
 	return exists
 }
 
-// GetTopic - create a topic if not exists
-func (qcli *PubSubClient) getTopic() error {
+// SetTopic - set or create a topic if not exists
+func (qcli *PubSubClient) SetTopic() error {
 	var (
 		err    error
 		exists bool
 	)
 	qcli.MyTopic = qcli.cli.Topic(qcli.TopicName)
 	exists, err = qcli.MyTopic.Exists(qcli.CTX)
-	if err != nil {
-		return err
-	}
 	if !exists {
+		log.Printf("creating topic: %s", qcli.TopicName)
 		qcli.MyTopic, err = qcli.cli.CreateTopic(qcli.CTX, qcli.TopicName)
 		return err
 	}
-	// log.Println(qcli.MyTopic)
+	log.Printf("getTopic: %v\n", qcli.MyTopic)
 	return nil
 }
 
@@ -123,11 +125,16 @@ func (qcli *PubSubClient) PublishResponse(deploystatus *pb.DeployStatusMessage) 
 	data, _ := proto.Marshal(deploystatus)
 	msg := &pubsub.Message{Data: data}
 
+	log.Printf("topic: %v\n", qcli.MyTopic)
+
 	qcli.MyTopic.PublishSettings = pubsub.PublishSettings{
 		ByteThreshold:  5000,
 		CountThreshold: 10,
 		DelayThreshold: 100 * time.Millisecond,
 	}
+
+	log.Printf("here")
+
 	result := qcli.MyTopic.Publish(qcli.CTX, msg)
 	// log.Println(result)
 	results = append(results, result)
@@ -162,7 +169,8 @@ func (qcli *PubSubClient) Subscribe() error {
 	return nil
 }
 
-// GetMessage - get a message?
+// GetMessage - get messages
+// blocking
 func (qcli *PubSubClient) GetMessage(fn messageHandler) {
 	err := qcli.MySub.Receive(qcli.CTX, fn)
 	if err != nil {
@@ -184,4 +192,29 @@ func (qcli *PubSubClient) Disconnect() {
 // Stop - close topic/flush messages
 func (qcli *PubSubClient) Stop() {
 	qcli.MyTopic.Stop()
+}
+
+//Delete get rid of topic
+func (qcli *PubSubClient) Delete() {
+	qcli.MyTopic.Stop()
+	qcli.MyTopic.Delete(qcli.CTX)
+}
+
+// Pull get messages for processing
+func (qcli *PubSubClient) Pull() (pubsub.Message, error) {
+	var retmess pubsub.Message
+	qcli.MySub.ReceiveSettings.MaxOutstandingMessages = 1
+	qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour))
+	ctx, cancel := context.WithTimeout(qcli.CTX, 20*time.Second)
+	defer cancel()
+	err := qcli.MySub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
+		retmess = *m
+		log.Printf("Got a mess %s", m.Data)
+		m.Ack()
+	})
+	if err != context.Canceled {
+		log.Println(err)
+		// retmess.Data = []byte(fmt.Sprintf("%v", err))
+	}
+	return retmess, err
 }

@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func processMessage(ctx context.Context, msg *pubsub.Message) {
+func deployMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	var message pb.DeployMessage
 	var response pb.DeployStatusMessage
 	err := proto.Unmarshal(msg.Data, &message)
@@ -40,13 +40,20 @@ func processMessage(ctx context.Context, msg *pubsub.Message) {
 		log.Printf("Error: %v", err)
 	}
 	log.Printf("got messageid %s", msg.ID)
-	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
+	msg.Ack()
+	topicName := fmt.Sprintf("%s-%s-deploystatus-%s", viper.GetString("cenv"), viper.GetString("cid"), msg.ID)
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("cenv"), TopicName: topicName}
-	pscli.Connect()
+	log.Printf("Connecting to topic %s\n", pscli.TopicName)
+	pscli.NewClient()
+	pscli.SetTopic()
+	log.Printf("Connected to topic %s\n", pscli.TopicName)
+	log.Printf("topic: %v", pscli.MyTopic)
 	response.Status = fmt.Sprintf("Deploying %s to namespace  %s.\n", message.Name, message.Namespace)
 	response.MsgID = msg.ID
+	log.Printf("publishing reponse\n")
 	pscli.PublishResponse(&response)
-	msg.Ack()
+	// pscli.Stop()
+	log.Printf("goodbye deployed\n")
 	return
 }
 
@@ -104,9 +111,10 @@ func runClient() {
 	}()
 	log.Printf("Starting Deployinator Client\n")
 	log.Printf("Listening for events on topic: %s in project: %s", topicName, viper.GetString("cenv"))
-	pscli.Connect()
+	pscli.NewClient()
+	pscli.SetTopic()
 	pscli.Subscribe()
-	pscli.GetMessage(processMessage)
+	pscli.GetMessage(deployMessageHandler)
 }
 
 // clientCmd represents the client command
