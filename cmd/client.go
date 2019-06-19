@@ -17,7 +17,6 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
@@ -52,7 +51,14 @@ func deployMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	response.MsgID = msg.ID
 	log.Printf("publishing reponse\n")
 	pscli.PublishResponse(&response)
-	// pscli.Stop()
+	for i := 0; i < 10; i++ {
+		response.Status = fmt.Sprintf("Still Deploying %s to namespace  %s.\n", message.Name, message.Namespace)
+		pscli.PublishResponse(&response)
+	}
+	response.Status = fmt.Sprintf("Stop")
+	response.Success = true
+	pscli.PublishResponse(&response)
+	pscli.Stop()
 	log.Printf("goodbye deployed\n")
 	return
 }
@@ -68,17 +74,8 @@ func deployService(host string) error {
 	}
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
-	stream, err := c.TriggerDeploy(context.Background(), &service)
-	for {
-		resp, err := stream.Recv()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("%v.TriggerDeploy(_) = _, %v", c, err)
-		}
-		log.Println(resp)
-	}
+	resp, err := c.TriggerDeploy(context.Background(), &service)
+	log.Println(resp)
 	return nil
 }
 

@@ -66,68 +66,38 @@ func waitTopicExists(pscli *pubsubclient.PubSubClient) bool {
 	return false
 }
 
-func getDeployResponses(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer, msgid string) error {
-	response := new(pb.DeployStatusMessage)
-	topicName := fmt.Sprintf("%s-%s-deploystatus-%s", in.Cenv, in.Cid, msgid)
-	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
-	cli.NewClient()
-	if exists := waitTopicExists(&cli); exists == false {
-		return fmt.Errorf("topic didn't exists or something")
-	}
-	cli.SetTopic()
-	response.Status = fmt.Sprintf("Subscribing to %s", cli.TopicName)
-	stream.Send(response)
-	if err := cli.Subscribe(); err != nil {
-		log.Println(err)
-		return err
-	}
-	response.Status = fmt.Sprintf("Subscribed to %s", cli.TopicName)
-	stream.Send(response)
-	// cli.GetMessage(processServerMessage)
-	cli.Pull()
-	// msg, err := cli.Pull()
-	// if err != nil {
-	// 	response.Status = fmt.Sprintln(err)
-	// 	stream.Send(response)
-	// 	return err
-	// }
-	// response.Status = fmt.Sprintf("Recieved messageID: %s - %s", msg.ID, msg.Data)
-	// stream.Send(response)
-	// proto.Unmarshal(msg.Data, response)
-	// if msgid == response.MsgID {
-	// 	stream.Send(response)
-	// } else {
-	// 	response.Status = "not our message"
-	// 	stream.Send(response)
-	// }
-	// // cli.Delete()
-	return nil
-}
-
 // send a message to pubsub
 // sub to deploy status and stream messages back
-func (ds *deployinatorServer) TriggerDeploy(in *pb.DeployMessage, stream pb.Deployinator_TriggerDeployServer) error {
+func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
 	response := new(pb.DeployStatusMessage)
 	response.Status = "Starting deploy"
-	stream.Send(response)
 	topicName := fmt.Sprintf("%s-%s-deploy", in.Cenv, in.Cid)
 	response.Status = fmt.Sprintf("Connecting to topic %s", topicName)
-	stream.Send(response)
 	cli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
 	cli.NewClient()
 	cli.SetTopic()
-	response.Status = fmt.Sprintf("Connected to topic %s", topicName)
-	stream.Send(response)
 	msgid, err := cli.Publish(in)
 	if err != nil {
 		log.Println(err)
-		return err
+		return response, err
 	}
 	response.Status = fmt.Sprintf("Published %v to %s", in, topicName)
-	stream.Send(response)
 	cli.Stop()
-	getDeployResponses(in, stream, msgid)
-	return nil
+	topicName = fmt.Sprintf("%s-%s-deploystatus-%s", in.Cenv, in.Cid, msgid)
+	scli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
+	scli.NewClient()
+	if waitTopicExists(&scli) == false {
+		log.Fatal("topic never exists")
+	}
+	scli.SetTopic()
+	scli.Subscribe()
+	log.Println(scli.MySub)
+	messages := scli.GetAll()
+	for _, message := range messages {
+		log.Println(message.Status)
+	}
+	scli.Stop()
+	return response, nil
 }
 
 func (ds *deployinatorServer) DeployStatus(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {

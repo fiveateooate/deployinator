@@ -13,7 +13,6 @@ import (
 	google "golang.org/x/oauth2/google"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-	// pubsub "google.golang.org/genproto/googleapis/pubsub/v1"
 )
 
 // PubSubClient holds queue related stuff
@@ -87,7 +86,7 @@ func (qcli *PubSubClient) SetTopic() error {
 		qcli.MyTopic, err = qcli.cli.CreateTopic(qcli.CTX, qcli.TopicName)
 		return err
 	}
-	log.Printf("getTopic: %v\n", qcli.MyTopic)
+	// log.Printf("getTopic: %v\n", qcli.MyTopic)
 	return nil
 }
 
@@ -152,7 +151,6 @@ func (qcli *PubSubClient) PublishResponse(deploystatus *pb.DeployStatusMessage) 
 
 // Subscribe - do that to a topic
 func (qcli *PubSubClient) Subscribe() error {
-	// log.Printf("topic: %s\n", qcli.TopicName)
 	qcli.SubName = fmt.Sprintf("%s-%s", qcli.TopicName, sharedfuncs.RandString(12))
 	qcli.MySub = qcli.cli.Subscription(qcli.SubName)
 	exists, err := qcli.MySub.Exists(qcli.CTX)
@@ -165,7 +163,6 @@ func (qcli *PubSubClient) Subscribe() error {
 			log.Fatalf("Failed to create subscription: %v", err)
 		}
 	}
-	// log.Println(qcli.MySub)
 	return nil
 }
 
@@ -177,6 +174,7 @@ func (qcli *PubSubClient) GetMessage(fn messageHandler) {
 		log.Println(err)
 		return
 	}
+	return
 }
 
 // Disconnect delete subscription
@@ -200,21 +198,28 @@ func (qcli *PubSubClient) Delete() {
 	qcli.MyTopic.Delete(qcli.CTX)
 }
 
-// Pull get messages for processing
-func (qcli *PubSubClient) Pull() (pubsub.Message, error) {
-	var retmess pubsub.Message
-	qcli.MySub.ReceiveSettings.MaxOutstandingMessages = 1
-	qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour))
-	ctx, cancel := context.WithTimeout(qcli.CTX, 20*time.Second)
-	defer cancel()
-	err := qcli.MySub.Receive(ctx, func(ctx context.Context, m *pubsub.Message) {
-		retmess = *m
-		log.Printf("Got a mess %s", m.Data)
-		m.Ack()
-	})
-	if err != context.Canceled {
-		log.Println(err)
-		// retmess.Data = []byte(fmt.Sprintf("%v", err))
+//GetAll - get messages but filter them
+func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
+	var messages []pb.DeployStatusMessage
+	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour)); err != nil {
+		log.Fatalln(err)
 	}
-	return retmess, err
+	err := qcli.MySub.Receive(qcli.CTX, func(ctx context.Context, msg *pubsub.Message) {
+		var message pb.DeployStatusMessage
+		err := proto.Unmarshal(msg.Data, &message)
+		if err != nil {
+			log.Printf("Error: %v", err)
+		}
+		msg.Ack()
+		if message.Status == "Stop" {
+			qcli.Cancel()
+		}
+		log.Println(message.Status)
+		messages = append(messages, message)
+	})
+	if err != nil {
+		log.Println(err)
+		return messages
+	}
+	return messages
 }
