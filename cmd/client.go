@@ -48,15 +48,12 @@ func deployMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
 	log.Printf("topic: %v", pscli.MyTopic)
-	response.Status = fmt.Sprintf("Deploying %s to namespace  %s", message.Name, message.Namespace)
-	log.Printf("publishing: %s\n", response.Status)
-	pscli.PublishResponse(&response)
+	response.Status = fmt.Sprintf("Deploying %s to namespace  %s\n", message.Name, message.Namespace)
 	for i := 0; i < 10; i++ {
-		response.Status = fmt.Sprintf("Still Deploying %s to namespace  %s", message.Name, message.Namespace)
+		response.Status += fmt.Sprintf("Still Deploying %s to namespace  %s\n", message.Name, message.Namespace)
 		log.Printf("publishing: %s\n", response.Status)
-		pscli.PublishResponse(&response)
 	}
-	response.Status = "Stop:" + msg.ID
+	response.Status += fmt.Sprintf("Finished deploying %s\n", message.Name)
 	response.Success = true
 	log.Printf("publishing: %s\n", response.Status)
 	pscli.PublishResponse(&response)
@@ -77,7 +74,7 @@ func deployService(host string) error {
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
 	resp, err := c.TriggerDeploy(context.Background(), &service)
-	log.Println(resp)
+	log.Println(resp.Status)
 	return nil
 }
 

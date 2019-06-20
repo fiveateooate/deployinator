@@ -198,7 +198,7 @@ func (qcli *PubSubClient) Delete() {
 func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 	var messages []pb.DeployStatusMessage
 	log.Println("here in getall yall")
-	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour*10)); err != nil {
+	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Minute*10)); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("guess I seeked back yo")
@@ -210,9 +210,6 @@ func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 			log.Printf("Error: %v", err)
 		}
 		msg.Ack()
-		if message.Status == "Stop" {
-			qcli.Cancel()
-		}
 		log.Println(message.Status)
 		messages = append(messages, message)
 	})
@@ -225,39 +222,31 @@ func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 }
 
 //GetMsgIDMessages - get messages but filter them
-func (qcli *PubSubClient) GetMsgIDMessages(msgid string) []pb.DeployStatusMessage {
-	var messages []pb.DeployStatusMessage
+func (qcli *PubSubClient) GetMsgIDMessages(msgid string) pb.DeployStatusMessage {
+	var message pb.DeployStatusMessage
+	message.Success = false
 	log.Printf("here in getall yall: %s", msgid)
-	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour*10)); err != nil {
+	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Minute*10)); err != nil {
 		log.Fatalln(err)
 	}
 	log.Println("guess I seeked back yo")
 	err := qcli.MySub.Receive(qcli.CTX, func(ctx context.Context, msg *pubsub.Message) {
-		var message pb.DeployStatusMessage
 		err := proto.Unmarshal(msg.Data, &message)
 		if err != nil {
 			log.Printf("Error: %v", err)
 		}
 		if message.MsgID == msgid {
-			log.Printf("This is my message: %s", message.MsgID)
-			log.Printf("The status is: %s\n", message.Status)
-			if message.Status == "Stop:"+msgid {
-				msg.Ack()
-				ctx.Done()
-				return
-			}
-			log.Println(message.Status)
-			messages = append(messages, message)
 			msg.Ack()
+			ctx.Done()
+			qcli.Cancel()
+		} else {
+			msg.Nack()
 		}
-		// } else {
-		// 	msg.Nack()
-		// }
 	})
 	if err != nil {
 		log.Println(err)
-		return messages
+		return message
 	}
 	log.Println("leaving getall yall")
-	return messages
+	return message
 }
