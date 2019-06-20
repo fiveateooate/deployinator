@@ -40,23 +40,25 @@ func deployMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	}
 	log.Printf("got messageid %s", msg.ID)
 	msg.Ack()
-	topicName := fmt.Sprintf("%s-%s-deploystatus-%s", viper.GetString("cenv"), viper.GetString("cid"), msg.ID)
+	response.MsgID = msg.ID
+	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("cenv"), TopicName: topicName}
 	log.Printf("Connecting to topic %s\n", pscli.TopicName)
 	pscli.NewClient()
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
 	log.Printf("topic: %v", pscli.MyTopic)
-	response.Status = fmt.Sprintf("Deploying %s to namespace  %s.\n", message.Name, message.Namespace)
-	response.MsgID = msg.ID
-	log.Printf("publishing reponse\n")
+	response.Status = fmt.Sprintf("Deploying %s to namespace  %s", message.Name, message.Namespace)
+	log.Printf("publishing: %s\n", response.Status)
 	pscli.PublishResponse(&response)
 	for i := 0; i < 10; i++ {
-		response.Status = fmt.Sprintf("Still Deploying %s to namespace  %s.\n", message.Name, message.Namespace)
+		response.Status = fmt.Sprintf("Still Deploying %s to namespace  %s", message.Name, message.Namespace)
+		log.Printf("publishing: %s\n", response.Status)
 		pscli.PublishResponse(&response)
 	}
-	response.Status = fmt.Sprintf("Stop")
+	response.Status = "Stop:" + msg.ID
 	response.Success = true
+	log.Printf("publishing: %s\n", response.Status)
 	pscli.PublishResponse(&response)
 	pscli.Stop()
 	log.Printf("goodbye deployed\n")

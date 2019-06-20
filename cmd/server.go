@@ -83,20 +83,22 @@ func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMe
 	}
 	response.Status = fmt.Sprintf("Published %v to %s", in, topicName)
 	cli.Stop()
-	topicName = fmt.Sprintf("%s-%s-deploystatus-%s", in.Cenv, in.Cid, msgid)
+	topicName = fmt.Sprintf("%s-%s-deploystatus", in.Cenv, in.Cid)
 	scli := pubsubclient.PubSubClient{ProjectID: in.Cenv, TopicName: topicName}
 	scli.NewClient()
 	if waitTopicExists(&scli) == false {
-		log.Fatal("topic never exists")
+		log.Println("topic never exists")
+		return response, nil
 	}
 	scli.SetTopic()
 	scli.Subscribe()
 	log.Println(scli.MySub)
-	messages := scli.GetAll()
+	messages := scli.GetMsgIDMessages(msgid)
 	for _, message := range messages {
-		log.Println(message.Status)
+		log.Println(message.MsgID, message.Status)
 	}
 	scli.Stop()
+	log.Println("done m10r")
 	return response, nil
 }
 

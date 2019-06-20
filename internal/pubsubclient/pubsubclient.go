@@ -132,10 +132,7 @@ func (qcli *PubSubClient) PublishResponse(deploystatus *pb.DeployStatusMessage) 
 		DelayThreshold: 100 * time.Millisecond,
 	}
 
-	log.Printf("here")
-
 	result := qcli.MyTopic.Publish(qcli.CTX, msg)
-	// log.Println(result)
 	results = append(results, result)
 	for _, r := range results {
 		id, err := r.Get(qcli.CTX)
@@ -144,7 +141,6 @@ func (qcli *PubSubClient) PublishResponse(deploystatus *pb.DeployStatusMessage) 
 			return "", err
 		}
 		msgid = id
-		// fmt.Printf("Published a message with a message ID: %s\n", id)
 	}
 	return msgid, nil
 }
@@ -201,11 +197,14 @@ func (qcli *PubSubClient) Delete() {
 //GetAll - get messages but filter them
 func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 	var messages []pb.DeployStatusMessage
-	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour)); err != nil {
+	log.Println("here in getall yall")
+	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour*10)); err != nil {
 		log.Fatalln(err)
 	}
+	log.Println("guess I seeked back yo")
 	err := qcli.MySub.Receive(qcli.CTX, func(ctx context.Context, msg *pubsub.Message) {
 		var message pb.DeployStatusMessage
+		log.Printf("got a message: %v\n", message)
 		err := proto.Unmarshal(msg.Data, &message)
 		if err != nil {
 			log.Printf("Error: %v", err)
@@ -221,5 +220,44 @@ func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 		log.Println(err)
 		return messages
 	}
+	log.Println("leaving getall yall")
+	return messages
+}
+
+//GetMsgIDMessages - get messages but filter them
+func (qcli *PubSubClient) GetMsgIDMessages(msgid string) []pb.DeployStatusMessage {
+	var messages []pb.DeployStatusMessage
+	log.Printf("here in getall yall: %s", msgid)
+	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Hour*10)); err != nil {
+		log.Fatalln(err)
+	}
+	log.Println("guess I seeked back yo")
+	err := qcli.MySub.Receive(qcli.CTX, func(ctx context.Context, msg *pubsub.Message) {
+		var message pb.DeployStatusMessage
+		err := proto.Unmarshal(msg.Data, &message)
+		if err != nil {
+			log.Printf("Error: %v", err)
+		}
+		if message.MsgID == msgid {
+			log.Printf("This is my message: %s", message.MsgID)
+			log.Printf("The status is: %s\n", message.Status)
+			if message.Status == "Stop:"+msgid {
+				msg.Ack()
+				ctx.Done()
+				return
+			}
+			log.Println(message.Status)
+			messages = append(messages, message)
+			msg.Ack()
+		}
+		// } else {
+		// 	msg.Nack()
+		// }
+	})
+	if err != nil {
+		log.Println(err)
+		return messages
+	}
+	log.Println("leaving getall yall")
 	return messages
 }
