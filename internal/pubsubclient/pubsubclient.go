@@ -175,11 +175,14 @@ func (qcli *PubSubClient) GetMessage(fn messageHandler) {
 
 // Disconnect delete subscription
 func (qcli *PubSubClient) Disconnect() {
+	qcli.CTX, qcli.Cancel = context.WithCancel(context.Background())
+	log.Printf("Deleting subscription: %s\n", qcli.MySub)
 	if err := qcli.MySub.Delete(qcli.CTX); err != nil {
 		log.Println(err)
 		return
 	}
-	qcli.Cancel()
+	// qcli.Cancel()
+	qcli.Stop()
 	log.Printf("Subscription %s deleted", qcli.SubName)
 }
 
@@ -188,8 +191,8 @@ func (qcli *PubSubClient) Stop() {
 	qcli.MyTopic.Stop()
 }
 
-//Delete get rid of topic
-func (qcli *PubSubClient) Delete() {
+//DeleteTopic get rid of topic
+func (qcli *PubSubClient) DeleteTopic() {
 	qcli.MyTopic.Stop()
 	qcli.MyTopic.Delete(qcli.CTX)
 }

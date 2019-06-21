@@ -91,7 +91,8 @@ func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMe
 	scli.Subscribe()
 	log.Println(scli.MySub)
 	response = scli.GetMsgIDMessages(msgid)
-	scli.Stop()
+	// scli.Stop()
+	scli.Disconnect()
 	return &response, nil
 }
 
