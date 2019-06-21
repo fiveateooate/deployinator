@@ -38,27 +38,21 @@ func deployMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	if err != nil {
 		log.Printf("Error: %v", err)
 	}
-	log.Printf("got messageid %s", msg.ID)
 	msg.Ack()
 	response.MsgID = msg.ID
 	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("cenv"), TopicName: topicName}
-	log.Printf("Connecting to topic %s\n", pscli.TopicName)
 	pscli.NewClient()
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
-	log.Printf("topic: %v", pscli.MyTopic)
 	response.Status = fmt.Sprintf("Deploying %s to namespace  %s\n", message.Name, message.Namespace)
 	for i := 0; i < 10; i++ {
 		response.Status += fmt.Sprintf("Still Deploying %s to namespace  %s\n", message.Name, message.Namespace)
-		log.Printf("publishing: %s\n", response.Status)
 	}
 	response.Status += fmt.Sprintf("Finished deploying %s\n", message.Name)
 	response.Success = true
-	log.Printf("publishing: %s\n", response.Status)
 	pscli.PublishResponse(&response)
 	pscli.Stop()
-	log.Printf("goodbye deployed\n")
 	return
 }
 

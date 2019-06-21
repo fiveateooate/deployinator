@@ -225,11 +225,9 @@ func (qcli *PubSubClient) GetAll() []pb.DeployStatusMessage {
 func (qcli *PubSubClient) GetMsgIDMessages(msgid string) pb.DeployStatusMessage {
 	var message pb.DeployStatusMessage
 	message.Success = false
-	log.Printf("here in getall yall: %s", msgid)
 	if err := qcli.MySub.SeekToTime(qcli.CTX, time.Now().Add(-time.Minute*10)); err != nil {
 		log.Fatalln(err)
 	}
-	log.Println("guess I seeked back yo")
 	err := qcli.MySub.Receive(qcli.CTX, func(ctx context.Context, msg *pubsub.Message) {
 		err := proto.Unmarshal(msg.Data, &message)
 		if err != nil {
@@ -247,6 +245,5 @@ func (qcli *PubSubClient) GetMsgIDMessages(msgid string) pb.DeployStatusMessage 
 		log.Println(err)
 		return message
 	}
-	log.Println("leaving getall yall")
 	return message
 }
