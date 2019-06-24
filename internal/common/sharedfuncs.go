@@ -47,7 +47,7 @@ func ProcessMessage(ctx context.Context, msg *pubsub.Message) {
 	if err != nil {
 		log.Printf("Error: %v", err)
 	}
-	log.Printf("Name: %s, Namespace: %s.\n", message.Name, message.Namespace)
+	log.Printf("Name: %s, Namespace: %s.\n", message.Slug, message.Namespace)
 	msg.Ack()
 	return
 }

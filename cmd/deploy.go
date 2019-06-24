@@ -28,8 +28,8 @@ import (
 // deployService - deploy a service and stream messages
 // publish status messages to deploystatus topic
 func deployService(host string) error {
-	service := pb.DeployMessage{Name: "MyService", Namespace: "MyNamespace", Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
-	log.Printf("Triggering a deploy of %s", service.Name)
+	service := pb.DeployMessage{Slug: "MyService", Namespace: "MyNamespace", Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
+	log.Printf("Triggering a deploy of %s", service.Slug)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)

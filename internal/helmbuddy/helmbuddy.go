@@ -46,7 +46,7 @@ type HelmRelease struct {
 	Chart         string `json:"Chart"`
 	AppVersion    string `json:"AppVersion"`
 	Namespace     string `json:"Namespace"`
-	ReleaseExists bool   `json:ReleaseExists`
+	ReleaseExists bool   `json:"ReleaseExists"`
 }
 
 // HelmListOutput struct to hold unmarshaled json
@@ -56,6 +56,8 @@ type HelmListOutput struct {
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyz01234566789"
+
+// this is broke - no seed
 
 // RandStringBytes copied from https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-go
 func RandStringBytes(n int) string {

@@ -7,7 +7,7 @@ service Deployinator {
   rpc DeployStatus(DeployMessage) returns (DeployStatusMessage) {}
 }
 message DeployMessage {
-  string name = 1;
+  string slug = 1;
   string namespace = 2;
   string version = 3;
   string domain = 4;

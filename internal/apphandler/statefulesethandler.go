@@ -5,7 +5,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/fiveateooate/deployinator/helmbuddy"
+	"github.com/fiveateooate/deployinator/internal/helmbuddy"
 	"github.com/wsxiaoys/terminal/color"
 	appsv1 "k8s.io/api/apps/v1"
 )

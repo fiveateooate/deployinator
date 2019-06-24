@@ -24,6 +24,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	pb "github.com/fiveateooate/deployinator/deployproto"
+	"github.com/fiveateooate/deployinator/internal/helmdeploy"
 	"github.com/fiveateooate/deployinator/internal/pubsubclient"
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
@@ -31,9 +32,9 @@ import (
 )
 
 func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
-	var message pb.DeployMessage
+	var deploymessage pb.DeployMessage
 	var response pb.DeployStatusMessage
-	err := proto.Unmarshal(msg.Data, &message)
+	err := proto.Unmarshal(msg.Data, &deploymessage)
 	if err != nil {
 		log.Printf("Error: %v", err)
 	}
@@ -44,11 +45,9 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	pscli.NewClient()
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
-	response.Status = fmt.Sprintf("Deploying %s to namespace  %s\n", message.Name, message.Namespace)
-	for i := 0; i < 10; i++ {
-		response.Status += fmt.Sprintf("Still Deploying %s to namespace  %s\n", message.Name, message.Namespace)
-	}
-	response.Status += fmt.Sprintf("Finished deploying %s\n", message.Name)
+	response.Status = fmt.Sprintf("Deploying %s to namespace  %s\n", deploymessage.Slug, deploymessage.Namespace)
+	helmdeploy.HelmDeploy(&deploymessage)
+	response.Status += fmt.Sprintf("Finished deploying %s\n", deploymessage.Slug)
 	response.Success = true
 	pscli.PublishResponse(&response)
 	pscli.Stop()

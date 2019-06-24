@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fiveateooate/deployinator/k8sbuddy"
-
-	"github.com/fiveateooate/deployinator/helmbuddy"
+	"github.com/fiveateooate/deployinator/internal/helmbuddy"
+	"github.com/fiveateooate/deployinator/internal/k8sbuddy"
 	"github.com/wsxiaoys/terminal/color"
 )
 
@@ -27,23 +26,6 @@ type AbstractHandler struct {
 	Handler AppHandler
 	App     *App
 }
-
-// // HandleApp do stuff with an app
-// func (ah *AbstractHandler) HandleApp() {
-// 	fmt.Println("HandleApp")
-// 	switch ah.App.DeployerType {
-// 	case "helm":
-// 		if ah.App.K8sApp.DP != nil {
-// 			DeploymentHandler{}.Handler.ManageApp()
-// 		} else if ah.App.K8sApp.DS != nil {
-// 			DaemonsetHandler{}.Handler.ManageApp()
-// 		} else if ah.App.K8sApp.SS != nil {
-// 			StatefulsetHandler{}.Handler.ManageApp()
-// 		} else {
-// 			NullHandler{}.Handler.ManageApp()
-// 		}
-// 	}
-// }
 
 func selectVersion(chart string) string {
 	var (
