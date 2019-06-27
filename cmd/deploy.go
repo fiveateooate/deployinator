@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/fiveateooate/deployinator/internal/envfilehandler"
+
 	pb "github.com/fiveateooate/deployinator/deployproto"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,7 +30,10 @@ import (
 // deployService - deploy a service and stream messages
 // publish status messages to deploystatus topic
 func deployService(host string) error {
-	service := pb.DeployMessage{Slug: "MyService", Namespace: "MyNamespace", Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
+	var envyml envfilehandler.Envfile
+	envyml.LoadEnvfile(".weave.yaml")
+	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
+	service.Version = "v2.8.1-6"
 	log.Printf("Triggering a deploy of %s", service.Slug)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {

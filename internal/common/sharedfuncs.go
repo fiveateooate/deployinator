@@ -5,6 +5,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"os/exec"
 	"time"
 
 	"cloud.google.com/go/pubsub"
@@ -29,6 +30,18 @@ func RandString(n int) string {
 		}
 	}
 	return string(b)
+}
+
+// RunCmd - shell out and run something
+func RunCmd(cmd string, args []string) ([]byte, error) {
+	var (
+		cmdOut []byte
+		err    error
+	)
+	if cmdOut, err = exec.Command(cmd, args...).Output(); err != nil {
+		return cmdOut, err
+	}
+	return cmdOut, nil
 }
 
 // FileExists - checks if a file exists and returns bool

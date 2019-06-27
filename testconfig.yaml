@@ -2,5 +2,6 @@ serverAddr: 127.0.0.1
 listenAddr: 0.0.0.0
 listenPort: 9091
 serverPort: 9091
-cenv: weave-h
-cid: gke1
+cenv: dev
+cid: ut
+projectID: weave-h

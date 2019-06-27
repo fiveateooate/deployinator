@@ -24,7 +24,7 @@ import (
 
 	"cloud.google.com/go/pubsub"
 	pb "github.com/fiveateooate/deployinator/deployproto"
-	"github.com/fiveateooate/deployinator/internal/helmdeploy"
+	deployers "github.com/fiveateooate/deployinator/internal/deployers"
 	"github.com/fiveateooate/deployinator/internal/pubsubclient"
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
@@ -41,14 +41,18 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	msg.Ack()
 	response.MsgID = msg.ID
 	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
-	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("cenv"), TopicName: topicName}
+	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	pscli.NewClient()
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
-	response.Status = fmt.Sprintf("Deploying %s to namespace  %s\n", deploymessage.Slug, deploymessage.Namespace)
-	helmdeploy.HelmDeploy(&deploymessage)
-	response.Status += fmt.Sprintf("Finished deploying %s\n", deploymessage.Slug)
-	response.Success = true
+	// add some case here for different deployers
+	if 1 == 1 {
+		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version)
+		response.Status = fmt.Sprintf("Deploying %s to namespace %s\n", deploymessage.Slug, deploymessage.Namespace)
+		err = helmdeployer.HelmDeploy(&deploymessage)
+		response.Status += helmdeployer.DeployResponse
+		response.Success = true
+	}
 	pscli.PublishResponse(&response)
 	pscli.Stop()
 	return
@@ -62,7 +66,7 @@ func deployinateCleanup(cli *pubsubclient.PubSubClient) {
 func deployinate() {
 	c := make(chan os.Signal, 1)
 	topicName := fmt.Sprintf("%s-%s-deploy", viper.GetString("cenv"), viper.GetString("cid"))
-	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("cenv"), TopicName: topicName}
+	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-c
