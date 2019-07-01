@@ -59,8 +59,4 @@ var deployCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
-	deployCmd.Flags().String("server-addr", "127.0.0.1", "server address")
-	viper.BindPFlag("serverAddr", deployCmd.Flags().Lookup("server-addr"))
-	deployCmd.Flags().Int("server-port", 9091, "server port")
-	viper.BindPFlag("serverPort", deployCmd.Flags().Lookup("server-port"))
 }
