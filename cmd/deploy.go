@@ -35,6 +35,7 @@ func deployService(host string) error {
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
 	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
 	service.Version = "v2.8.1-6"
+	log.Printf("Service: %v\n", service)
 	log.Printf("Triggering a deploy of %s", service.Slug)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
