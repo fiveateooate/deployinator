@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	sharedfuncs "github.com/fiveateooate/deployinator/internal/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -59,7 +59,7 @@ func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.deployinator.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/deployinator/deployconfig.yaml)")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -71,16 +71,10 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory.
-		home, err := homedir.Dir()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		defaultconfig := "/etc/deployinator/deployconfig.yaml"
+		if sharedfuncs.FileExists(defaultconfig) {
+			viper.SetConfigFile(defaultconfig)
 		}
-
-		// Search config in home directory with name ".deployinator" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".deployinator")
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
@@ -89,4 +83,12 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+	deployCmd.Flags().String("server-addr", "127.0.0.1", "server address")
+	viper.BindPFlag("serverAddr", deployCmd.Flags().Lookup("server-addr"))
+	deployCmd.Flags().Int("server-port", 9091, "server port")
+	viper.BindPFlag("serverPort", deployCmd.Flags().Lookup("server-port"))
+	deployCmd.Flags().String("cid", "cu1", "cluster id")
+	viper.BindPFlag("cid", deployCmd.Flags().Lookup("cid"))
+	deployCmd.Flags().String("cenv", "local", "cluster env")
+	viper.BindPFlag("cenv", deployCmd.Flags().Lookup("cenv"))
 }
