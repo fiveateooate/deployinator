@@ -20,6 +20,7 @@ import (
 	"log"
 
 	"github.com/fiveateooate/deployinator/internal/envfilehandler"
+	"github.com/wsxiaoys/terminal/color"
 
 	pb "github.com/fiveateooate/deployinator/deployproto"
 	"github.com/spf13/cobra"
@@ -42,6 +43,10 @@ func deployService(host string) error {
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
 	resp, err := c.TriggerDeploy(context.Background(), &service)
+	if err != nil {
+		color.Printf("@r%s", err)
+		return err
+	}
 	log.Println(resp.Status)
 	return nil
 }
