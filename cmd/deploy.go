@@ -31,7 +31,7 @@ import (
 // publish status messages to deploystatus topic
 func deployService(host string) error {
 	var envyml envfilehandler.Envfile
-	envyml.LoadEnvfile(".weave.yaml")
+	envyml.LoadEnvfile(viper.GetString("deploydescription"))
 	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
 	service.Version = "v2.8.1-6"
 	log.Printf("Triggering a deploy of %s", service.Slug)

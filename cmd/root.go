@@ -91,4 +91,6 @@ func initConfig() {
 	viper.BindPFlag("cid", deployCmd.Flags().Lookup("cid"))
 	deployCmd.Flags().String("cenv", "local", "cluster env")
 	viper.BindPFlag("cenv", deployCmd.Flags().Lookup("cenv"))
+	deployCmd.Flags().String("deploydescription", "someconfig.ymal", "yaml that describes the what of the deploy")
+	viper.BindPFlag("deploydescription", deployCmd.Flags().Lookup("deploydescription"))
 }
