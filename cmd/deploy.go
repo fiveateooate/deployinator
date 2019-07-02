@@ -33,19 +33,16 @@ import (
 func deployService(host string) error {
 	var envyml envfilehandler.Envfile
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
-	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv")}
-	service.Version = "v2.8.1-6"
-	log.Printf("Service: %v\n", service)
+	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version")}
 	log.Printf("Triggering a deploy of %s", service.Slug)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		return err
 	}
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
 	resp, err := c.TriggerDeploy(context.Background(), &service)
 	if err != nil {
-		color.Printf("@r%s", err)
 		return err
 	}
 	log.Println(resp.Status)
@@ -59,10 +56,19 @@ var deployCmd = &cobra.Command{
 	Long:  `deploy and stuff`,
 	Run: func(cmd *cobra.Command, args []string) {
 		host := fmt.Sprintf("%s:%s", viper.GetString("serverAddr"), viper.GetString("serverPort"))
-		deployService(host)
+		if err := deployService(host); err != nil {
+			log.Fatalf("Failed to deploy: %s", color.Sprintf("@r%s", err))
+		}
+
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(deployCmd)
+	deployCmd.Flags().String("server-addr", "127.0.0.1", "server address")
+	viper.BindPFlag("serverAddr", deployCmd.Flags().Lookup("server-addr"))
+	deployCmd.Flags().Int("server-port", 9091, "server port")
+	viper.BindPFlag("serverPort", deployCmd.Flags().Lookup("server-port"))
+	deployCmd.Flags().String("version", "0.0.1", "version to deploy")
+	viper.BindPFlag("version", deployCmd.Flags().Lookup("version"))
 }
