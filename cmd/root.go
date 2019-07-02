@@ -60,6 +60,10 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/deployinator/deployconfig.yaml)")
+	rootCmd.Flags().String("cid", "cu1", "cluster id")
+	viper.BindPFlag("cid", rootCmd.Flags().Lookup("cid"))
+	rootCmd.Flags().String("cenv", "local", "cluster env")
+	viper.BindPFlag("cenv", rootCmd.Flags().Lookup("cenv"))
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
@@ -83,14 +87,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
-	deployCmd.Flags().String("server-addr", "127.0.0.1", "server address")
-	viper.BindPFlag("serverAddr", deployCmd.Flags().Lookup("server-addr"))
-	deployCmd.Flags().Int("server-port", 9091, "server port")
-	viper.BindPFlag("serverPort", deployCmd.Flags().Lookup("server-port"))
-	deployCmd.Flags().String("cid", "cu1", "cluster id")
-	viper.BindPFlag("cid", deployCmd.Flags().Lookup("cid"))
-	deployCmd.Flags().String("cenv", "local", "cluster env")
-	viper.BindPFlag("cenv", deployCmd.Flags().Lookup("cenv"))
 	deployCmd.Flags().String("deploydescription", "someconfig.ymal", "yaml that describes the what of the deploy")
 	viper.BindPFlag("deploydescription", deployCmd.Flags().Lookup("deploydescription"))
 }
