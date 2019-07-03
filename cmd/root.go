@@ -75,7 +75,7 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		defaultconfig := "/etc/deployinator/deployconfig.yaml"
+		defaultconfig := "/etc/deployinator/deployinator.yaml"
 		if sharedfuncs.FileExists(defaultconfig) {
 			viper.SetConfigFile(defaultconfig)
 		}
