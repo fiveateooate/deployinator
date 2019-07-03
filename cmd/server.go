@@ -71,6 +71,7 @@ func waitTopicExists(pscli *pubsubclient.PubSubClient) bool {
 func (ds *deployinatorServer) TriggerDeploy(ctx context.Context, in *pb.DeployMessage) (*pb.DeployStatusMessage, error) {
 	var response pb.DeployStatusMessage
 	topicName := fmt.Sprintf("%s-%s-deploy", in.Cenv, in.Cid)
+	log.Printf("topicname: %s\n", topicName)
 	cli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	cli.NewClient()
 	cli.SetTopic()

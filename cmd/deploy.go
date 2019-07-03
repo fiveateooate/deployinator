@@ -34,11 +34,14 @@ func deployService(host string) error {
 	var envyml envfilehandler.Envfile
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
 	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version")}
-	log.Printf("Triggering a deploy of %s", service.Slug)
+	log.Println(envyml.Domain)
+	log.Println(service)
+	log.Printf("Triggering a deploy of %s to namespace: %s\n", service.Slug, service.Namespace)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
 		return err
 	}
+	log.Printf("Connected\n")
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
 	resp, err := c.TriggerDeploy(context.Background(), &service)
