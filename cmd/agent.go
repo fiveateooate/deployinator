@@ -46,7 +46,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
 	// add some case here for different deployers
-	if 1 == 0 {
+	if 0 == 0 {
 		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version)
 		response.Status = fmt.Sprintf("Deploying %s to namespace %s\n", deploymessage.Slug, deploymessage.Namespace)
 		err = helmdeployer.HelmDeploy(&deploymessage)
