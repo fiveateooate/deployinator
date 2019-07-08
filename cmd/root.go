@@ -63,9 +63,9 @@ func init() {
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is /etc/deployinator/deployconfig.yaml)")
 	rootCmd.PersistentFlags().StringVar(&cid, "cid", "cu1", "cluster id")
-	viper.BindPFlag("cid", rootCmd.Flags().Lookup("cid"))
+	// viper.BindPFlag("cid", rootCmd.Flags().Lookup("cid"))
 	rootCmd.PersistentFlags().StringVar(&cenv, "cenv", "local", "cluster env")
-	viper.BindPFlag("cenv", rootCmd.Flags().Lookup("cenv"))
+	// viper.BindPFlag("cenv", rootCmd.Flags().Lookup("cenv"))
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")

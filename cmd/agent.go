@@ -40,7 +40,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	}
 	msg.Ack()
 	response.MsgID = msg.ID
-	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
+	topicName := fmt.Sprintf("%s-%s-deploystatus", cenv, cid)
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	pscli.NewClient()
 	pscli.SetTopic()
@@ -66,7 +66,7 @@ func deployinateCleanup(cli *pubsubclient.PubSubClient) {
 
 func deployinate() {
 	c := make(chan os.Signal, 1)
-	topicName := fmt.Sprintf("%s-%s-deploy", viper.GetString("cenv"), viper.GetString("cid"))
+	topicName := fmt.Sprintf("%s-%s-deploy", cenv, cid)
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -74,7 +74,7 @@ func deployinate() {
 		deployinateCleanup(&pscli)
 	}()
 	log.Printf("Start Deployinating\n")
-	log.Printf("Listening for events on topic: %s in project: %s", topicName, viper.GetString("cenv"))
+	log.Printf("Listening for events on topic: %s in project: %s", topicName, cenv)
 	pscli.NewClient()
 	pscli.SetTopic()
 	pscli.Subscribe()
