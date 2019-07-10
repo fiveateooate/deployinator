@@ -40,7 +40,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	}
 	msg.Ack()
 	response.MsgID = msg.ID
-	topicName := fmt.Sprintf("%s-%s-deploystatus", cenv, cid)
+	topicName := fmt.Sprintf("%s-%s-deploystatus", viper.GetString("cenv"), viper.GetString("cid"))
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	pscli.NewClient()
 	pscli.SetTopic()
@@ -48,12 +48,14 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	// add some case here for different deployers
 	if 0 == 0 {
 		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version)
+		response.Success = true
 		response.Status = fmt.Sprintf("Deploying %s to namespace %s\n", deploymessage.Slug, deploymessage.Namespace)
 		err = helmdeployer.HelmDeploy(&deploymessage)
+		if err != nil {
+			response.Success = false
+		}
 		response.Status += helmdeployer.DeployResponse
-		response.Success = true
 	}
-	response.Status = "Deployed"
 	pscli.PublishResponse(&response)
 	pscli.Stop()
 	return
@@ -66,7 +68,7 @@ func deployinateCleanup(cli *pubsubclient.PubSubClient) {
 
 func deployinate() {
 	c := make(chan os.Signal, 1)
-	topicName := fmt.Sprintf("%s-%s-deploy", cenv, cid)
+	topicName := fmt.Sprintf("%s-%s-deploy", viper.GetString("cenv"), viper.GetString("cid"))
 	pscli := pubsubclient.PubSubClient{ProjectID: viper.GetString("projectID"), TopicName: topicName}
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -74,7 +76,7 @@ func deployinate() {
 		deployinateCleanup(&pscli)
 	}()
 	log.Printf("Start Deployinating\n")
-	log.Printf("Listening for events on topic: %s in project: %s", topicName, cenv)
+	log.Printf("Listening for events on topic: %s in project: %s", topicName, viper.GetString("cenv"))
 	pscli.NewClient()
 	pscli.SetTopic()
 	pscli.Subscribe()
@@ -84,7 +86,7 @@ func deployinate() {
 // deployinateCmd represents the deployinate command
 var agentCmd = &cobra.Command{
 	Use:   "agent [options]",
-	Short: "the deployinator agent",
+	Short: "run the deployinator agent",
 	Long:  `Deploys stuff in a cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
 		deployinate()

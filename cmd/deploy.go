@@ -33,7 +33,7 @@ import (
 func deployService(host string) error {
 	var envyml envfilehandler.Envfile
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
-	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: cid, Cenv: cenv, Version: viper.GetString("version")}
+	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version")}
 	log.Println(envyml.Domain)
 	log.Println(service)
 	log.Printf("Triggering a deploy of %s to namespace: %s\n", service.Slug, service.Namespace)
@@ -74,4 +74,6 @@ func init() {
 	viper.BindPFlag("serverPort", deployCmd.Flags().Lookup("server-port"))
 	deployCmd.Flags().String("version", "0.0.1", "version to deploy")
 	viper.BindPFlag("version", deployCmd.Flags().Lookup("version"))
+	deployCmd.Flags().String("deploydescription", "someconfig.ymal", "yaml that describes the what of the deploy")
+	viper.BindPFlag("deploydescription", deployCmd.Flags().Lookup("deploydescription"))
 }
