@@ -3,6 +3,7 @@ package deployers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 
@@ -117,6 +118,7 @@ func (hi *HelmDeployer) findValuesFile(cenv string, cid string) {
 // getRelease return something release
 func (hi *HelmDeployer) getRelease() {
 	regex := fmt.Sprintf("^%s(|-[a-z0-9]{5})$", hi.AppName)
+	log.Printf("Searching for release like %s\n", regex)
 	r := regexp.MustCompile(regex)
 	// preset some values in case release is not found
 	tmp := color.Sprintf("not found\n")
@@ -162,6 +164,7 @@ func (hi *HelmDeployer) listReleases() (HelmListOutput, error) {
 	)
 	cmd := "helm"
 	args := []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "--output", "json", "list"}
+	log.Printf("listing releases - %s %s\n", cmd, args)
 	if cmdOut, err = sharedfuncs.RunCmd(cmd, args); err != nil {
 		return output, err
 	}
@@ -202,6 +205,7 @@ func NewHelmDeployer(appname string, namespace string, version string, repo stri
 
 // HelmDeploy - deploy a service or whatever
 func (hi *HelmDeployer) HelmDeploy(msg *pb.DeployMessage) error {
+	log.Println(hi)
 	hi.getRelease()
 	if hi.ReleaseExists && (msg.Version == hi.ReleaseVersion) {
 		hi.DeployResponse += color.Sprintf("Version %s already deployed\n", msg.Version)
