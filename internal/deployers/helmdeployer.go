@@ -20,7 +20,7 @@ type HelmDeployer struct {
 	Repo           string
 	AppName        string
 	Namespace      string
-	KubeContext    string
+	HelmHost       string
 	ReleaseName    string
 	ReleaseVersion string
 	ValuesFile     string
@@ -62,7 +62,7 @@ func (hi *HelmDeployer) helmUpgrade() bool {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", hi.KubeContext, "--namespace", hi.Namespace, "upgrade", hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
+		cmdArgs = []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "upgrade", hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
 	)
 	if hi.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -82,7 +82,7 @@ func (hi *HelmDeployer) helmInstall() bool {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--kube-context", hi.KubeContext, "--namespace", hi.Namespace, "install", "--version", hi.Version, "--name", hi.ReleaseName, hi.ChartPath}
+		cmdArgs = []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "install", "--version", hi.Version, "--name", hi.ReleaseName, hi.ChartPath}
 	)
 	if hi.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -123,7 +123,7 @@ func (hi *HelmDeployer) getRelease() {
 	hi.ReleaseName = fmt.Sprintf("%s-%s", hi.AppName, sharedfuncs.RandString(5))
 	hi.ReleaseExists = false
 	hi.DeployResponse += color.Sprintf("@cSearching for helm release ...\n")
-	releases, _ := listReleases(hi.Namespace, hi.KubeContext)
+	releases, _ := hi.listReleases()
 	for _, release := range releases.Releases {
 		match := r.FindString(release.Name)
 		if match != "" {
@@ -154,14 +154,14 @@ func (hi *HelmDeployer) fetchChart() error {
 }
 
 // listReleases return struct of releases
-func listReleases(namespace string, kubeContext string) (HelmListOutput, error) {
+func (hi *HelmDeployer) listReleases() (HelmListOutput, error) {
 	var (
 		cmdOut []byte
 		err    error
 		output HelmListOutput
 	)
 	cmd := "helm"
-	args := []string{"--kube-context", kubeContext, "--namespace", namespace, "--output", "json", "list"}
+	args := []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "--output", "json", "list"}
 	if cmdOut, err = sharedfuncs.RunCmd(cmd, args); err != nil {
 		return output, err
 	}
@@ -185,12 +185,12 @@ func (hi *HelmDeployer) repoUpdate() {
 }
 
 // NewHelmDeployer a new helmdeployer with some defaults set
-func NewHelmDeployer(appname string, namespace string, version string) *HelmDeployer {
+func NewHelmDeployer(appname string, namespace string, version string, repo string) *HelmDeployer {
 	hi := new(HelmDeployer)
-	hi.Repo = "weavelabxyz"
+	hi.Repo = repo
 	hi.AppName = appname
 	hi.Namespace = namespace
-	hi.KubeContext = "dev.ut"
+	hi.HelmHost = "tiller-deploy:44134"
 	hi.Version = version
 	hi.Chart = fmt.Sprintf("%s/%s", hi.Repo, hi.AppName)
 	hi.TmpDir = "/tmp"

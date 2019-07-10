@@ -2,7 +2,8 @@ serverAddr: 127.0.0.1
 listenAddr: 0.0.0.0
 listenPort: 9091
 serverPort: 9091
-cenv: dev
-cid: ut
+cenv: myclusterenvironment
+cid: myclusterid
 projectID: google-proj
 deploydescription: someyaml.yaml
+helmrepo: stable

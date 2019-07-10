@@ -47,7 +47,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
 	// add some case here for different deployers
 	if 0 == 0 {
-		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version)
+		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version, viper.GetString("helmrepo"))
 		response.Success = true
 		response.Status = fmt.Sprintf("Deploying %s to namespace %s\n", deploymessage.Slug, deploymessage.Namespace)
 		err = helmdeployer.HelmDeploy(&deploymessage)
@@ -95,7 +95,8 @@ var agentCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(agentCmd)
-
+	deployCmd.Flags().String("herlmrepo", "stable", "helm repo to use for helm stuff")
+	viper.BindPFlag("helmrepo", deployCmd.Flags().Lookup("helmrepo"))
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
