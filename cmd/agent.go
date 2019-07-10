@@ -48,6 +48,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	// add some case here for different deployers
 	if 0 == 0 {
 		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Domain, deploymessage.Version, viper.GetString("helmrepo"))
+		log.Printf("hi: %v\n", helmdeployer)
 		response.Success = true
 		response.Status = fmt.Sprintf("Deploying %s to namespace %s\n", deploymessage.Slug, deploymessage.Namespace)
 		err = helmdeployer.HelmDeploy(&deploymessage)
@@ -95,15 +96,6 @@ var agentCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(agentCmd)
-	deployCmd.Flags().String("herlmrepo", "stable", "helm repo to use for helm stuff")
-	viper.BindPFlag("helmrepo", deployCmd.Flags().Lookup("helmrepo"))
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// deployinateCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// deployinateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	agentCmd.Flags().String("helmrepo", "stable", "helm repo to use for helm stuff")
+	viper.BindPFlag("helmrepo", agentCmd.Flags().Lookup("helmrepo"))
 }
