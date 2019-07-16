@@ -58,12 +58,12 @@ func processLine(text string) string {
 }
 
 // helmUpgrade do a helm upgrade
-func (hi *HelmDeployer) helmUpgrade() bool {
+func (hi *HelmDeployer) helmUpgrade() error {
 	var (
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "upgrade", hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
+		cmdArgs = []string{"--host", hi.HelmHost, "upgrade", "--atomic", "--verify", "--namespace", hi.Namespace, hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
 	)
 	if hi.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -71,19 +71,19 @@ func (hi *HelmDeployer) helmUpgrade() bool {
 	}
 	if cmdOut, err = sharedfuncs.RunCmd(cmdName, cmdArgs); err != nil {
 		hi.DeployResponse += color.Sprintf("@rRelease upgrade failed: %s\n%s\n", err, cmdArgs)
-		return false
+		return err
 	}
 	hi.DeployResponse += color.Sprintf(string(cmdOut))
-	return true
+	return nil
 }
 
 // helmInstall install something with helm
-func (hi *HelmDeployer) helmInstall() bool {
+func (hi *HelmDeployer) helmInstall() error {
 	var (
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--host", hi.HelmHost, "--namespace", hi.Namespace, "install", "--version", hi.Version, "--name", hi.ReleaseName, hi.ChartPath}
+		cmdArgs = []string{"--host", hi.HelmHost, "install", "--atomic", "--verify", "--namespace", hi.Namespace, "--version", hi.Version, "--name", hi.ReleaseName, hi.ChartPath}
 	)
 	if hi.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
@@ -91,10 +91,10 @@ func (hi *HelmDeployer) helmInstall() bool {
 	}
 	if cmdOut, err = sharedfuncs.RunCmd(cmdName, cmdArgs); err != nil {
 		hi.DeployResponse += color.Sprintf("@rInstall failed: %s\n%s\n", err, cmdArgs)
-		return false
+		return err
 	}
 	hi.DeployResponse += color.Sprintf(string(cmdOut))
-	return true
+	return nil
 }
 
 // findValuesFile - Use CENV and CID env vars to pick a values-xxx.yaml file
@@ -205,7 +205,7 @@ func NewHelmDeployer(appname string, namespace string, version string, repo stri
 
 // HelmDeploy - deploy a service or whatever
 func (hi *HelmDeployer) HelmDeploy(msg *pb.DeployMessage) error {
-	log.Println(hi)
+
 	hi.getRelease()
 	if hi.ReleaseExists && (msg.Version == hi.ReleaseVersion) {
 		hi.DeployResponse += color.Sprintf("Version %s already deployed\n", msg.Version)
@@ -213,14 +213,21 @@ func (hi *HelmDeployer) HelmDeploy(msg *pb.DeployMessage) error {
 	}
 	hi.repoUpdate()
 	if err := hi.fetchChart(); err != nil {
+		hi.DeployResponse += color.Sprintf("@rFail\n")
 		return err
 	}
 	hi.findValuesFile(msg.Cenv, msg.Cid)
 	hi.DeployResponse += color.Sprintf("@cDeploying %s ...\n", hi.AppName)
 	if hi.ReleaseExists {
-		hi.helmUpgrade()
+		if err := hi.helmUpgrade(); err != nil {
+			hi.DeployResponse += color.Sprintf("@rFail\n")
+			return err
+		}
 	} else {
-		hi.helmInstall()
+		if err := hi.helmInstall(); err != nil {
+			hi.DeployResponse += color.Sprintf("@rFail\n")
+			return err
+		}
 	}
 	hi.DeployResponse += color.Sprintf("@gSuccess\n")
 	return nil
