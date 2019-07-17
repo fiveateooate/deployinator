@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/fiveateooate/deployinator/internal/envfilehandler"
 	"github.com/wsxiaoys/terminal/color"
@@ -55,8 +56,8 @@ var deployCmd = &cobra.Command{
 		host := fmt.Sprintf("%s:%s", viper.GetString("serverAddr"), viper.GetString("serverPort"))
 		if err := deployService(host); err != nil {
 			log.Fatalf("Failed to deploy: %s", color.Sprintf("@r%s", err))
+			os.Exit(1)
 		}
-
 	},
 }
 
