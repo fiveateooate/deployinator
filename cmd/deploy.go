@@ -36,6 +36,7 @@ func deployService(host string) error {
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
 	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version")}
 	log.Printf("Triggering a deploy of %s to namespace: %s\n", service.Slug, service.Namespace)
+	log.Printf("connecting to %s\n", host)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
 		return err
@@ -43,8 +44,11 @@ func deployService(host string) error {
 	defer conn.Close()
 	c := pb.NewDeployinatorClient(conn)
 	resp, err := c.TriggerDeploy(context.Background(), &service)
+	if err != nil {
+		return err
+	}
 	log.Println(resp.Status)
-	return err
+	return nil
 }
 
 // deployCmd represents the client command
