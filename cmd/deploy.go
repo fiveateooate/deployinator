@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -48,6 +49,9 @@ func deployService(host string) error {
 		return err
 	}
 	log.Println(resp.Status)
+	if !resp.Success {
+		return errors.New(color.Sprintf("@rFAIL\n"))
+	}
 	return nil
 }
 
