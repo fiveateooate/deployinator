@@ -46,7 +46,9 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 	pscli.SetTopic()
 	log.Printf("Connected to topic %s\n", pscli.TopicName)
 	// add some case here for different deployers
-	if 0 == 0 {
+
+	switch deploymessage.Deployertype {
+	case "helm":
 		helmdeployer := deployers.NewHelmDeployer(deploymessage.Slug, deploymessage.Namespace, deploymessage.Version, viper.GetString("helmrepo"))
 		log.Printf("hi: %v\n", helmdeployer)
 		response.Success = true
@@ -56,6 +58,18 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 			response.Success = false
 		}
 		response.Status += helmdeployer.DeployResponse
+	case "vaultpolicy":
+		vaultPolicyDeployer := deployers.NewVaultPolicyDeployer()
+		if err := vaultPolicyDeployer.Deploy(); err != nil {
+			response.Status = "Fail"
+			response.Success = false
+		} else {
+			response.Status = "Success"
+			response.Success = true
+		}
+	default:
+		response.Status = "Unknown Deployer"
+		response.Success = false
 	}
 	pscli.PublishResponse(&response)
 	pscli.Stop()
