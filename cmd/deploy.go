@@ -35,7 +35,7 @@ import (
 func deployService(host string) error {
 	var envyml envfilehandler.Envfile
 	envyml.LoadEnvfile(viper.GetString("deploydescription"))
-	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version")}
+	service := pb.DeployMessage{Slug: envyml.Slug, Namespace: envyml.Domain, Cid: viper.GetString("cid"), Cenv: viper.GetString("cenv"), Version: viper.GetString("version"), Deployertype: viper.GetString("deployertype")}
 	log.Printf("Triggering a deploy of %s to namespace: %s\n", service.Slug, service.Namespace)
 	log.Printf("connecting to %s\n", host)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
@@ -79,4 +79,6 @@ func init() {
 	viper.BindPFlag("version", deployCmd.Flags().Lookup("version"))
 	deployCmd.Flags().String("deploydescription", "someconfig.ymal", "yaml that describes the what of the deploy")
 	viper.BindPFlag("deploydescription", deployCmd.Flags().Lookup("deploydescription"))
+	deployCmd.Flags().String("deployertype", "helm", "deployer to use")
+	viper.BindPFlag("deployertype", deployCmd.Flags().Lookup("deployertype"))
 }

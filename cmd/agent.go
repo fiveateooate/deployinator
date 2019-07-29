@@ -59,8 +59,8 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 		}
 		response.Status += helmdeployer.DeployResponse
 	case "vaultpolicy":
-		vaultPolicyDeployer := deployers.NewVaultPolicyDeployer()
-		if err := vaultPolicyDeployer.Deploy(); err != nil {
+		vaultDeployer := deployers.NewVaultDeployer()
+		if err := vaultDeployer.Deploy(); err != nil {
 			response.Status = "Fail"
 			response.Success = false
 		} else {
@@ -68,7 +68,7 @@ func deployinateMessageHandler(ctx context.Context, msg *pubsub.Message) {
 			response.Success = true
 		}
 	default:
-		response.Status = "Unknown Deployer"
+		response.Status = "Unknown Deployer Type"
 		response.Success = false
 	}
 	pscli.PublishResponse(&response)
