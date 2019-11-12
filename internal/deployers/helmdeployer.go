@@ -63,7 +63,7 @@ func (hi *HelmDeployer) helmUpgrade() error {
 		cmdOut  []byte
 		err     error
 		cmdName = "helm"
-		cmdArgs = []string{"--host", hi.HelmHost, "upgrade", "--atomic", "--namespace", hi.Namespace, hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
+		cmdArgs = []string{"--host", hi.HelmHost, "upgrade", "--namespace", hi.Namespace, hi.ReleaseName, "--version", hi.Version, hi.ChartPath}
 	)
 	if hi.ValuesFile != "" {
 		cmdArgs = append(cmdArgs, "-f")
